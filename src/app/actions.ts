@@ -1,3 +1,4 @@
+import DodoPayments from 'dodopayments';
 'use server';
 import { cookies } from 'next/headers';
 
@@ -331,5 +332,57 @@ export async function trackImpressions(listingIds: string[], placement: string) 
   } catch (err) {
     console.error('Failed to track impressions', err);
     return { success: false };
+  }
+}
+
+export async function createDodoCheckout(listingId: string) {
+  try {
+    if (!process.env.DODO_BEARER_TOKEN) throw new Error('Missing DODO_BEARER_TOKEN');
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Missing service role key');
+    
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      { auth: { persistSession: false } }
+    );
+
+    const { data: listing } = await supabaseAdmin.from('listings').select('id, name, status').eq('id', listingId).maybeSingle();
+    if (!listing) return { error: 'Listing not found.' };
+    if (listing.status !== 'pending') return { error: 'Listing is not pending.' };
+
+    const { data: bid } = await supabaseAdmin.from('bids').select('id, amount').eq('listing_id', listingId).eq('status', 'pending').maybeSingle();
+    if (!bid) return { error: 'Pending bid not found.' };
+
+    const dodo = new DodoPayments({ bearerToken: process.env.DODO_BEARER_TOKEN, environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode' });
+    
+    // Create product dynamically for this bid
+    const product = await dodo.products.create({
+      name: `Gotop Leaderboard: ${listing.name}`,
+      tax_category: 'digital_products',
+      price: {
+         type: 'one_time_price',
+         currency: 'USD',
+         price: bid.amount * 100, // Cents
+         discount: 0,
+         purchasing_power_parity: false,
+      }
+    });
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://gotop.lol';
+    
+    const session = await dodo.checkoutSessions.create({
+      product_cart: [{ product_id: product.product_id, quantity: 1 }],
+      metadata: {
+         listing_id: listingId,
+         bid_id: bid.id,
+         type: 'initial_bid'
+      },
+      return_url: `${appUrl}/checkout/${listingId}?status=success`
+    });
+
+    return { checkoutUrl: session.checkout_url };
+  } catch (error) {
+    console.error('Dodo error:', error);
+    return { error: 'Failed to create checkout' };
   }
 }

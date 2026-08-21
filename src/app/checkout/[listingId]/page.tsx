@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, useParams } from 'next/navigation';
-import { getCheckoutData, processMockPayment } from '@/app/actions';
+import { getCheckoutData, createDodoCheckout } from '@/app/actions';
 import { Loader2, ArrowRight, CheckCircle2, ShieldCheck, Copy } from 'lucide-react';
 import Link from 'next/link';
 
@@ -48,20 +48,38 @@ export default function CheckoutPage() {
     }
   }, [listingId]);
 
+  
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      if (urlParams.get('status') === 'success') {
+        setProcessing(true);
+        const interval = setInterval(async () => {
+          const data = await getCheckoutData(listingId as string);
+          if (data?.isAlreadyActive) {
+            clearInterval(interval);
+            setSuccess(true);
+            setProcessing(false);
+          }
+        }, 2000);
+        return () => clearInterval(interval);
+      }
+    }
+  }, [listingId]);
+
   const handlePayment = async () => {
     if (processing || !data) return;
     setProcessing(true);
     setErrorMsg('');
 
     try {
-      const res = await processMockPayment(listingId);
-      if (res.error) {
-        setErrorMsg(res.error);
-        setProcessing(false);
-      } else if (res.success) {
-        setSuccess(true);
-        setRankResult(res.rank || 0);
-      }
+      const res = await createDodoCheckout(listingId);
+        if (res.error) {
+          setErrorMsg(res.error);
+          setProcessing(false);
+        } else if (res.checkoutUrl) {
+          window.location.href = res.checkoutUrl;
+        }
     } catch (err) {
       setErrorMsg('An unexpected error occurred during payment processing.');
       setProcessing(false);

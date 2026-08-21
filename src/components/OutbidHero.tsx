@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 export function OutbidHero({ currentHighestBid }: { currentHighestBid: number }) {
+  const router = useRouter();
   const [bid, setBid] = useState(currentHighestBid + 1);
   const [url, setUrl] = useState('');
 
