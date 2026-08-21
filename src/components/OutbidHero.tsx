@@ -40,9 +40,9 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
       }
       
       setPreviewData({
-        name: res.data?.name || '',
+        name: res.data?.title || '',
         description: res.data?.description || '',
-        logo_url: res.data?.logo_url || null
+        logo_url: res.data?.favicon || null
       });
     } catch (err) {
       setErrorMsg('Failed to fetch website details');
