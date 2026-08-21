@@ -1,5 +1,5 @@
-import DodoPayments from 'dodopayments';
 'use server';
+import DodoPayments from 'dodopayments';
 import { cookies } from 'next/headers';
 
 import { getCategories } from '@/data/db';
