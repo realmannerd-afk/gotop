@@ -19,8 +19,14 @@ export function ProductCard({ product, rank, placement = 'leaderboard' }: Produc
       )}
       
       <Link href={`/product/${product.slug}`} className="flex-shrink-0">
-        <span className="flex size-12 md:size-14 items-center justify-center rounded-xl bg-gray-100 text-lg font-bold text-gray-500 hover:opacity-80 transition-opacity">
-          {product.logoUrl || product.name.charAt(0).toUpperCase()}
+        <span className="flex size-12 md:size-14 items-center justify-center rounded-xl bg-gray-100 text-lg font-bold text-gray-500 hover:opacity-80 transition-opacity overflow-hidden">
+          {product.logoUrl ? (
+            <img src={product.logoUrl} alt={product.name} className="w-full h-full object-contain bg-white" />
+          ) : product.websiteUrl ? (
+            <img src={`https://www.google.com/s2/favicons?domain=${product.websiteUrl.replace(/^https?:\/\//, '').split('/')[0]}&sz=64`} alt={product.name} className="w-8 h-8 object-contain" />
+          ) : (
+            product.name.charAt(0).toUpperCase()
+          )}
         </span>
       </Link>
       

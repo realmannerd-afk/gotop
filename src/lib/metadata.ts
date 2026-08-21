@@ -28,24 +28,34 @@ function fetchSafe(urlStr: string, redirects = 0): Promise<{ ok: boolean; header
         'User-Agent': 'gotop-bot/1.0',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
       },
-      lookup: (hostname: string, dnsOptions: any, callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) => {
+      lookup: (hostname: string, dnsOptions: any, callback: (err: NodeJS.ErrnoException | null, address: string | any[], family: number) => void) => {
         dns.lookup(hostname, dnsOptions, (err, address, family) => {
-          if (err) return callback(err, address, family);
-          if (
-            address.startsWith('127.') || 
-            address.startsWith('10.') || 
-            address.startsWith('192.168.') || 
-            address.startsWith('169.254.') ||
-            address.startsWith('0.') ||
-            /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(address) ||
-            address === '::1' || 
-            address.toLowerCase().startsWith('fc00:') || 
-            address.toLowerCase().startsWith('fd00:') || 
-            address.toLowerCase().startsWith('fe80:')
-          ) {
-            return callback(new Error('DNS Rebinding prevented: Address resolved to forbidden IP'), address, family);
+          if (err) return callback(err, address as any, family);
+          
+          let ips: string[] = [];
+          if (typeof address === 'string') {
+            ips.push(address);
+          } else if (Array.isArray(address)) {
+            ips = address.map(a => typeof a === 'string' ? a : a.address);
           }
-          callback(null, address, family);
+
+          for (const ip of ips) {
+            if (
+              ip.startsWith('127.') || 
+              ip.startsWith('10.') || 
+              ip.startsWith('192.168.') || 
+              ip.startsWith('169.254.') ||
+              ip.startsWith('0.') ||
+              /^172\.(1[6-9]|2[0-9]|3[0-1])\./.test(ip) ||
+              ip === '::1' || 
+              ip.toLowerCase().startsWith('fc00:') || 
+              ip.toLowerCase().startsWith('fd00:') || 
+              ip.toLowerCase().startsWith('fe80:')
+            ) {
+              return callback(new Error('DNS Rebinding prevented: Address resolved to forbidden IP'), address as any, family);
+            }
+          }
+          callback(null, address as any, family);
         });
       }
     };
