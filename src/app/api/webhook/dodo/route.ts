@@ -1,7 +1,8 @@
+import { NextRequest } from "next/server";
 import { Webhooks } from "@dodopayments/nextjs";
 import { createClient } from "@supabase/supabase-js";
 
-export const POST = async (req: Request) => {
+export const POST = async (req: NextRequest) => {
   const handler = Webhooks({
     webhookKey: process.env.DODO_WEBHOOK_KEY || 'dummy_secret_for_build_time',
     onPayload: async (payload) => {
