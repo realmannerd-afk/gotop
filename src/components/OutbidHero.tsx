@@ -11,8 +11,7 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!url) return;
-    // For now, just alert. Later, you will integrate Stripe Checkout here.
-    alert(`Redirecting to Stripe Checkout to pay $${bid} for ${url}...`);
+    router.push(`/submit?url=${encodeURIComponent(url)}&bid=${bid}`);
   };
 
   return (
