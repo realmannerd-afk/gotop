@@ -33,6 +33,7 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
         return;
       }
       
+      if (res.targetUrl && res.targetUrl !== url) { setUrl(res.targetUrl); }
       const cats = await fetchCategories();
       if (cats && cats.length > 0) {
         setCategories(cats.map(c => c.name));

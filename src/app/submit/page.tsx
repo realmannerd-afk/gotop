@@ -57,7 +57,7 @@ function SubmitForm() {
       
       setFormData(prev => ({
         ...prev,
-        url: targetUrl,
+        url: res.targetUrl || targetUrl,
         name: res.data?.title || '',
         description: res.data?.description || '',
       }));

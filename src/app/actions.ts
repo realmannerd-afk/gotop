@@ -13,12 +13,16 @@ export async function fetchCategories() {
 }
 
 export async function fetchUrlMetadata(url: string) {
-  const safe = await isSafeUrl(url);
+  let targetUrl = url;
+  if (!/^https?:\/\//i.test(targetUrl)) {
+    targetUrl = 'https://' + targetUrl;
+  }
+  const safe = await isSafeUrl(targetUrl);
   if (!safe) {
     return { error: 'Invalid or unsafe URL' };
   }
-  const meta = await fetchMetadata(url);
-  return { data: meta };
+  const meta = await fetchMetadata(targetUrl);
+  return { data: meta, targetUrl };
 }
 
 export async function submitListing(data: {
