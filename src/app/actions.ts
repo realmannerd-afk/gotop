@@ -55,7 +55,7 @@ export async function submitListing(data: {
     if (data.name.length < 1 || data.name.length > 200) return { error: 'Name is invalid' };
     if (data.description.length < 5 || data.description.length > 1500) return { error: 'Description is invalid' };
     
-    if (data.bid < 2 || !Number.isInteger(data.bid)) return { error: 'Minimum bid is $2, whole numbers only' };
+    if (data.bid < 1 || !Number.isInteger(data.bid)) return { error: 'Minimum bid is $1, whole numbers only' };
 
     // Get categories to validate
     const categories = await getCategories();

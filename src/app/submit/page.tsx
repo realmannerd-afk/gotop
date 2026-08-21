@@ -24,7 +24,7 @@ function SubmitForm() {
     name: '',
     description: '',
     category: '',
-    bid: Math.max(2, initialBid),
+    bid: Math.max(1, initialBid),
   });
 
   useEffect(() => {
@@ -88,7 +88,7 @@ function SubmitForm() {
   const handleBidSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
-    if (formData.bid < 2) return setErrorMsg('Minimum bid is $2');
+    if (formData.bid < 1) return setErrorMsg('Minimum bid is $1');
 
     setLoading(true);
     try {
@@ -225,7 +225,7 @@ function SubmitForm() {
               <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/50 flex items-start gap-3">
                 <Target className="w-5 h-5 mt-0.5 flex-shrink-0" />
                 <p className="text-sm leading-relaxed">
-                  The higher your bid, the higher you rank on the leaderboard. Ties are broken by who bid first. You can increase your bid at any time. Minimum bid is $2.
+                  The higher your bid, the higher you rank on the leaderboard. Ties are broken by who bid first. You can increase your bid at any time. Minimum bid is $1.
                 </p>
               </div>
               

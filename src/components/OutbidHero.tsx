@@ -84,7 +84,7 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
         <span className="inline-flex items-center gap-2">
           <button 
             type="button" 
-            onClick={() => setBid(b => Math.max(5, b - 1))}
+            onClick={() => setBid(b => Math.max(1, b - 1))}
             className="inline-flex items-center justify-center rounded-full text-sm font-bold w-6 h-6 sm:w-8 sm:h-8 bg-emerald-100 text-emerald-700 hover:bg-emerald-200 transition-colors"
           >
             -
@@ -116,7 +116,7 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
         </span>
       </h2>
       <p className="mx-auto mt-2 max-w-md text-center text-sm font-medium leading-relaxed text-gray-500">
-        <span className="text-emerald-600">New spots start at $5.</span> Paying less than the #1 price still puts you on the board at whatever place that bid can take.
+        <span className="text-emerald-600">New spots start at $1.</span> Paying less than the #1 price still puts you on the board at whatever place that bid can take.
       </p>
 
       
