@@ -120,11 +120,13 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
       </p>
 
       
-      <form onSubmit={handleCheckout} className="mt-4 flex flex-col max-w-3xl mx-auto w-full px-4">
+      
+      <form onSubmit={handleCheckout} className="mt-6 flex flex-col max-w-2xl mx-auto w-full px-4">
+        
+        {/* URL Input Bar */}
         <div className="flex flex-col md:flex-row items-center bg-white p-1.5 rounded-2xl shadow-sm border border-gray-200 transition-all focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:border-emerald-400">
-          
           <div className="relative flex-1 w-full flex items-center min-w-0">
-            <span className="absolute left-4 w-5 h-5 rounded overflow-hidden flex items-center justify-center text-gray-400 shrink-0">
+            <span className="absolute left-4 w-6 h-6 rounded overflow-hidden flex items-center justify-center text-gray-400 shrink-0">
               {domain ? (
                 <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`} alt="Icon" className="w-full h-full object-contain" />
               ) : (
@@ -141,42 +143,43 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="example.com" 
-              className="w-full h-12 pl-12 pr-4 bg-transparent text-[15px] outline-none text-gray-900 placeholder:text-gray-400 font-medium" 
+              className="w-full h-14 pl-14 pr-4 bg-transparent text-lg outline-none text-gray-900 placeholder:text-gray-400 font-medium" 
             />
-          </div>
-
-          <div className="hidden md:block w-px h-6 bg-gray-200 shrink-0 mx-1" />
-
-          <div className="relative w-full md:w-44 shrink-0 border-t border-gray-100 md:border-t-0 mt-1 md:mt-0">
-            <select 
-              required
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full h-12 pl-4 pr-10 bg-transparent text-[15px] font-medium text-gray-600 outline-none cursor-pointer appearance-none"
-            >
-              <option value="" disabled>Category</option>
-              {categories.map(c => (
-                <option key={c} value={c}>{c}</option>
-              ))}
-            </select>
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
-            </div>
           </div>
 
           <button 
             type="submit" 
             disabled={isCheckingOut || !url || !selectedCategory}
-            className="w-full md:w-auto h-12 mt-1 md:mt-0 px-8 rounded-xl bg-gray-900 text-white font-bold hover:bg-emerald-600 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full md:w-auto h-14 mt-2 md:mt-0 px-10 rounded-xl bg-gray-900 text-white font-bold hover:bg-emerald-600 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isCheckingOut ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Checkout'}
           </button>
         </div>
         
         {errorMsg && (
-          <p className="text-red-500 text-sm text-center font-medium mt-3">{errorMsg}</p>
+          <p className="text-red-500 text-sm text-center font-medium mt-4">{errorMsg}</p>
         )}
+
+        {/* Category Pills */}
+        <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          {categories.map(c => (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setSelectedCategory(c)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                selectedCategory === c 
+                  ? 'bg-gray-900 text-white shadow-sm' 
+                  : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50 hover:border-gray-300'
+              }`}
+            >
+              {c}
+            </button>
+          ))}
+        </div>
+
       </form>
+
 
     </section>
   );
