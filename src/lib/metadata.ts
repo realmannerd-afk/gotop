@@ -35,8 +35,8 @@ function fetchSafe(urlStr: string, redirects = 0): Promise<{ ok: boolean; header
           let ips: string[] = [];
           if (typeof address === 'string') {
             ips.push(address);
-          } else if (Array.isArray(address)) {
-            ips = address.map(a => typeof a === 'string' ? a : a.address);
+          } else if (Array.isArray(address as any)) {
+            ips = (address as any[]).map((a: any) => typeof a === 'string' ? a : a.address);
           }
 
           for (const ip of ips) {
