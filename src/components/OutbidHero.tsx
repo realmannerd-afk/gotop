@@ -40,9 +40,9 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
       }
       
       setPreviewData({
-        name: res.name || '',
-        description: res.description || '',
-        logo_url: res.logo_url || null
+        name: res.data?.name || '',
+        description: res.data?.description || '',
+        logo_url: res.data?.logo_url || null
       });
     } catch (err) {
       setErrorMsg('Failed to fetch website details');
@@ -74,7 +74,7 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
       }
       
       // Store token safely in session storage just like the submit page does
-      sessionStorage.setItem(gotop_token_, submitRes.token);
+      sessionStorage.setItem(`gotop_token_${submitRes.listingId}`, submitRes.token);
       
       // 2. Create Dodo Checkout
       const dodoRes = await createDodoCheckout(submitRes.listingId);
@@ -230,7 +230,7 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
                   className="flex-[2] h-12 rounded-xl font-bold text-white bg-emerald-500 hover:bg-emerald-600 transition-colors flex flex-row items-center justify-center gap-2"
                 >
                   {isCheckingOut ? <Loader2 className="w-5 h-5 animate-spin" /> : (
-                    <>Pay  <ArrowRight className="w-4 h-4" /></>
+                    <>Pay ${bid} <ArrowRight className="w-4 h-4" /></>
                   )}
                 </button>
               </div>
