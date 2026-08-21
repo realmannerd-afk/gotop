@@ -1,0 +1,13 @@
+User-agent: *
+Disallow: /checkout/
+Disallow: /manage/
+Disallow: /submit/
+Disallow: /admin/
+Allow: /
+Allow: /leaderboard
+Allow: /trending
+Allow: /new
+Allow: /category/
+Allow: /product/
+
+Sitemap: https://gotop.lol/sitemap.xml
