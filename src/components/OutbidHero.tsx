@@ -119,15 +119,16 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
         <span className="text-emerald-600">New spots start at $5.</span> Paying less than the #1 price still puts you on the board at whatever place that bid can take.
       </p>
 
-      <form onSubmit={handleCheckout} className="mt-4 flex flex-col gap-3 max-w-4xl mx-auto w-full px-4">
-        <div className="flex flex-col items-stretch gap-2 md:flex-row md:items-center bg-white p-2 rounded-2xl shadow-sm border border-gray-200">
+      
+      <form onSubmit={handleCheckout} className="mt-4 flex flex-col max-w-3xl mx-auto w-full px-4">
+        <div className="flex flex-col md:flex-row items-center bg-white p-1.5 rounded-2xl shadow-sm border border-gray-200 transition-all focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:border-emerald-400">
           
-          <div className="relative flex-1 flex items-center min-w-0">
-            <span className="absolute left-3 w-6 h-6 rounded-md overflow-hidden bg-gray-50 flex items-center justify-center text-gray-400 shrink-0">
+          <div className="relative flex-1 w-full flex items-center min-w-0">
+            <span className="absolute left-4 w-5 h-5 rounded overflow-hidden flex items-center justify-center text-gray-400 shrink-0">
               {domain ? (
                 <img src={`https://www.google.com/s2/favicons?domain=${domain}&sz=64`} alt="Icon" className="w-full h-full object-contain" />
               ) : (
-                <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4">
+                <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5"></circle>
                   <ellipse cx="12" cy="12" rx="4" ry="10" stroke="currentColor" strokeWidth="1.5"></ellipse>
                   <path d="M2 12H22" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5"></path>
@@ -139,44 +140,44 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
               type="text" 
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              placeholder="Your product URL (e.g. example.com)" 
-              className="w-full h-12 pl-12 pr-4 bg-transparent text-base outline-none text-gray-900 placeholder:text-gray-400" 
+              placeholder="example.com" 
+              className="w-full h-12 pl-12 pr-4 bg-transparent text-[15px] outline-none text-gray-900 placeholder:text-gray-400 font-medium" 
             />
           </div>
 
-          <div className="h-px md:h-8 md:w-px bg-gray-200 shrink-0 mx-2 hidden md:block" />
+          <div className="hidden md:block w-px h-6 bg-gray-200 shrink-0 mx-1" />
 
-          <div className="relative w-full md:w-48 shrink-0 border-t border-gray-100 md:border-t-0 pt-2 md:pt-0">
+          <div className="relative w-full md:w-44 shrink-0 border-t border-gray-100 md:border-t-0 mt-1 md:mt-0">
             <select 
               required
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full h-12 px-4 bg-gray-50 hover:bg-gray-100 md:bg-transparent md:hover:bg-gray-50 rounded-xl md:rounded-lg text-sm font-medium text-gray-700 outline-none cursor-pointer transition-colors appearance-none"
+              className="w-full h-12 pl-4 pr-10 bg-transparent text-[15px] font-medium text-gray-600 outline-none cursor-pointer appearance-none"
             >
-              <option value="" disabled>Select Category</option>
+              <option value="" disabled>Category</option>
               {categories.map(c => (
                 <option key={c} value={c}>{c}</option>
               ))}
             </select>
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 mt-1 md:mt-0">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6"/></svg>
             </div>
           </div>
 
           <button 
             type="submit" 
             disabled={isCheckingOut || !url || !selectedCategory}
-            className="h-12 mt-2 md:mt-0 px-8 rounded-xl bg-gray-900 text-white font-bold hover:bg-emerald-600 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full md:w-auto h-12 mt-1 md:mt-0 px-8 rounded-xl bg-gray-900 text-white font-bold hover:bg-emerald-600 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isCheckingOut ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Checkout'}
           </button>
-
         </div>
         
         {errorMsg && (
-          <p className="text-red-500 text-sm text-center font-medium mt-1">{errorMsg}</p>
+          <p className="text-red-500 text-sm text-center font-medium mt-3">{errorMsg}</p>
         )}
       </form>
+
     </section>
   );
 }
