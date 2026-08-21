@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { createClient } from '@supabase/supabase-js';
 
 export const GET = async () => {
@@ -21,5 +22,6 @@ export const GET = async () => {
     return NextResponse.json({ success: false, errors: { err0, err1, err2, err3 } });
   }
 
+  revalidatePath('/', 'layout');
   return NextResponse.json({ success: true, message: "All fake data wiped successfully! Your database is now a clean sheet." });
 };
