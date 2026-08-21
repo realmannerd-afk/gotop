@@ -11,8 +11,9 @@ export interface MetadataResult {
   favicon?: string;
 }
 
-function fetchSafe(urlStr: string): Promise<{ ok: boolean; headers: any; body: NodeJS.ReadableStream | null }> {
+function fetchSafe(urlStr: string, redirects = 0): Promise<{ ok: boolean; headers: any; body: NodeJS.ReadableStream | null }> {
   return new Promise((resolve, reject) => {
+    if (redirects > 3) return reject(new Error('Too many redirects'));
     let url: URL;
     try {
       url = new URL(urlStr);
@@ -51,11 +52,17 @@ function fetchSafe(urlStr: string): Promise<{ ok: boolean; headers: any; body: N
     };
 
     const req = client.request(url, options, (res) => {
+      if (res.statusCode && res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
+        const nextUrl = new URL(res.headers.location, url).toString();
+        fetchSafe(nextUrl, redirects + 1).then(resolve).catch(reject);
+        return;
+      }
       resolve({
         ok: res.statusCode ? res.statusCode >= 200 && res.statusCode < 300 : false,
         headers: res.headers,
         body: res
       });
+    });
     });
 
     req.on('error', reject);

@@ -143,14 +143,14 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="example.com" 
-              className="w-full h-14 pl-14 pr-4 bg-transparent text-lg outline-none text-gray-900 placeholder:text-gray-400 font-medium" 
+              className="w-full h-12 pl-14 pr-4 bg-transparent text-[15px] outline-none text-gray-900 placeholder:text-gray-400 font-medium" 
             />
           </div>
 
           <button 
             type="submit" 
             disabled={isCheckingOut || !url || !selectedCategory}
-            className="w-full md:w-auto h-14 mt-2 md:mt-0 px-10 rounded-xl bg-gray-900 text-white font-bold hover:bg-emerald-600 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full md:w-auto h-12 mt-2 md:mt-0 px-10 rounded-xl bg-gray-900 text-white font-bold hover:bg-emerald-600 transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {isCheckingOut ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Checkout'}
           </button>
