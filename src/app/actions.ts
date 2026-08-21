@@ -33,13 +33,27 @@ export async function submitListing(data: {
   bid: number;
 }) {
   try {
+    
+    // Auto-fetch metadata if not provided
+    if (!data.name || !data.description) {
+      const metaRes = await fetchUrlMetadata(data.url);
+      if (!metaRes.error && metaRes.data) {
+        data.url = metaRes.targetUrl || data.url;
+        data.name = data.name || metaRes.data.title || new URL(data.url).hostname;
+        data.description = data.description || metaRes.data.description || 'No description available for this website.';
+      } else {
+        return { error: 'Failed to securely reach website. Please check the URL.' };
+      }
+    }
+    
     // 1. Validation
+
     const safe = await isSafeUrl(data.url);
     if (!safe) return { error: 'Invalid or unsafe URL' };
     
     const normalizedUrl = normalizeUrl(data.url);
-    if (data.name.length < 2 || data.name.length > 80) return { error: 'Name must be 2-80 characters' };
-    if (data.description.length < 20 || data.description.length > 500) return { error: 'Description must be 20-500 characters' };
+    if (data.name.length < 1 || data.name.length > 200) return { error: 'Name is invalid' };
+    if (data.description.length < 5 || data.description.length > 1500) return { error: 'Description is invalid' };
     
     if (data.bid < 2 || !Number.isInteger(data.bid)) return { error: 'Minimum bid is $2, whole numbers only' };
 
