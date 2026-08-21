@@ -28,7 +28,6 @@ function fetchSafe(urlStr: string, redirects = 0): Promise<{ ok: boolean; header
         'User-Agent': 'gotop-bot/1.0',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
       },
-      // Prevents DNS rebinding by performing validation at the socket connection phase
       lookup: (hostname: string, dnsOptions: any, callback: (err: NodeJS.ErrnoException | null, address: string, family: number) => void) => {
         dns.lookup(hostname, dnsOptions, (err, address, family) => {
           if (err) return callback(err, address, family);
@@ -62,7 +61,6 @@ function fetchSafe(urlStr: string, redirects = 0): Promise<{ ok: boolean; header
         headers: res.headers,
         body: res
       });
-    });
     });
 
     req.on('error', reject);
