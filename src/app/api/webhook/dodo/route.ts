@@ -1,9 +1,11 @@
 import { Webhooks } from "@dodopayments/nextjs";
 import { createClient } from "@supabase/supabase-js";
 
-export const POST = Webhooks({
-  webhookKey: process.env.DODO_WEBHOOK_KEY!,
-  onPayload: async (payload) => {
+export const POST = async (req: Request) => {
+  const handler = Webhooks({
+    webhookKey: process.env.DODO_WEBHOOK_KEY || 'dummy_secret_for_build_time',
+
+    onPayload: async (payload) => {
     console.log(`Received Dodo Webhook: ${payload.type}`);
 
     if (payload.type === 'payment.succeeded') {
@@ -65,7 +67,10 @@ export const POST = Webhooks({
           provider: 'dodopayments',
           provider_id: payload.data.payment_id,
           status: 'completed'
-        });
+        
+  });
+  return handler(req);
+};
 
       console.log(`Successfully activated listing ${listing_id}`);
     }
