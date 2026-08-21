@@ -7,7 +7,7 @@ import { Loader2 } from 'lucide-react';
 
 export function OutbidHero({ currentHighestBid }: { currentHighestBid: number }) {
   const router = useRouter();
-  const [bid, setBid] = useState(currentHighestBid + 1);
+  const [bid, setBid] = useState(Math.max(1, currentHighestBid + 1));
   const [url, setUrl] = useState('');
   
   const [categories, setCategories] = useState<string[]>([]);

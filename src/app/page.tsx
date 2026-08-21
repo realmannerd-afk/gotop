@@ -11,7 +11,7 @@ export default async function Home() {
     getLeaderboard()
   ]);
 
-  const topBid = leaderboard.length > 0 ? leaderboard[0].currentBid : 10;
+  const topBid = leaderboard.length > 0 ? leaderboard[0].currentBid : 0;
   const topProducts = leaderboard; // Show all products on homepage just like outbid
 
   return (
