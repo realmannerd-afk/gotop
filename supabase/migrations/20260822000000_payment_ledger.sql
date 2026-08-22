@@ -4,3 +4,4 @@ ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_bid_id_fkey;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS processing_status TEXT DEFAULT 'pending';
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS expected_amount INTEGER;
 ALTER TABLE payments ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD';
+ALTER TABLE payments ADD CONSTRAINT payments_provider_payment_id_key UNIQUE (provider_payment_id);

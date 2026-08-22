@@ -27,7 +27,7 @@ export const POST = async (req: NextRequest) => {
         const { data: existingPayment, error: existingError } = await supabaseAdmin
           .from('payments')
           .select('id, processing_status')
-          .eq('provider_id', paymentId)
+          .eq('provider_payment_id', paymentId)
           .maybeSingle();
 
         if (existingError) throw new Error('Database error checking idempotency');
