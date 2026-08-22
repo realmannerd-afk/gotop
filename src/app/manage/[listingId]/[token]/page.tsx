@@ -65,20 +65,12 @@ export default function ManagementPage() {
       const res = await processRebidMock(listingId, token, rebidAmount);
       if (res.error) {
         setRebidError(res.error);
+        setIsRebidding(false);
+      } else if (res.checkoutUrl) {
+        window.location.href = res.checkoutUrl;
       } else {
-        setRebidSuccess({
-          newRank: res.rank,
-          newBid: res.newBid,
-          amountPaid: res.amountPaid
-        });
-        // Refresh data silently
-        const refresh = await getManagementData(listingId, token);
-        if (refresh.data) setData(refresh.data);
+        setIsRebidding(false);
       }
-    } catch (err) {
-      setRebidError('An error occurred during payment');
-    } finally {
-      setIsRebidding(false);
     }
   };
 
