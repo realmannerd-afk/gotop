@@ -13,7 +13,10 @@ export function Footer() {
         </p>
 
         <div className="flex items-center gap-6 text-sm font-medium text-gray-500 dark:text-gray-400">
+                    <Link href="/about" className="hover:text-gray-900 dark:hover:text-white transition-colors">About</Link>
+          <Link href="/rules" className="hover:text-gray-900 dark:hover:text-white transition-colors">Rules</Link>
           <Link href="/leaderboard" className="hover:text-gray-900 dark:hover:text-white transition-colors">Leaderboard</Link>
+          <Link href="/submit" className="hover:text-gray-900 dark:hover:text-white transition-colors">Submit</Link>
           <Link href="/submit" className="hover:text-gray-900 dark:hover:text-white transition-colors">Submit</Link>
         </div>
       </div>

@@ -25,7 +25,7 @@ export default async function Home() {
           </span>
           <span className="font-semibold text-gray-900">Live</span>
           <span className="text-gray-300">|</span>
-          <span>1,204 active bids</span>
+          <span>{leaderboard.length} active bids</span>
         </div>
       </header>
 
