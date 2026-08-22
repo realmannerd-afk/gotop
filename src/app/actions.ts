@@ -408,7 +408,8 @@ export async function createDodoCheckout(listingId: string) {
     return { checkoutUrl: session.checkout_url };
   } catch (error) {
     console.error('Dodo error:', error);
-    return { error: 'Failed to create checkout' };
+    return { error: 'Failed to create checkout: ' + (error.message || error.toString()) };
   }
 }
+
 
