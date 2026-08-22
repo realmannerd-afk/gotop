@@ -20,6 +20,7 @@ export interface Product {
   logoUrl: string;
   createdAt: string;
   websiteUrl: string;
+  clicks?: number;
 }
 
 // Convert db row to Product
@@ -47,6 +48,7 @@ function mapRowToProduct(row: Record<string, unknown> | { [key: string]: unknown
     logoUrl: r.logo_url,
     createdAt: r.created_at,
     websiteUrl: r.url,
+    clicks: (r as any).clicks?.[0]?.count ?? 0,
   };
 }
 
@@ -67,7 +69,7 @@ export async function getCategories(): Promise<Category[]> {
 export async function getLeaderboard(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('listings')
-    .select('*, categories(name)')
+    .select('*, categories(name), clicks(count)')
     .eq('status', 'active')
     .order('current_bid', { ascending: false })
     .order('bid_placed_at', { ascending: true });
@@ -83,7 +85,7 @@ export async function getLeaderboard(): Promise<Product[]> {
 export async function getTrending(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('listings')
-    .select('*, categories(name)')
+    .select('*, categories(name), clicks(count)')
     .eq('status', 'active')
     .order('bid_placed_at', { ascending: false })
     .limit(50);
@@ -99,7 +101,7 @@ export async function getTrending(): Promise<Product[]> {
 export async function getNewest(): Promise<Product[]> {
   const { data, error } = await supabase
     .from('listings')
-    .select('*, categories(name)')
+    .select('*, categories(name), clicks(count)')
     .eq('status', 'active')
     .order('created_at', { ascending: false });
     
@@ -122,7 +124,7 @@ export async function getByCategory(categorySlug: string): Promise<Product[]> {
 
   const { data, error } = await supabase
     .from('listings')
-    .select('*, categories(name)')
+    .select('*, categories(name), clicks(count)')
     .eq('status', 'active')
     .eq('category_id', categoryData.id)
     .order('current_bid', { ascending: false })
@@ -139,7 +141,7 @@ export async function getByCategory(categorySlug: string): Promise<Product[]> {
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   const { data, error } = await supabase
     .from('listings')
-    .select('*, categories(name)')
+    .select('*, categories(name), clicks(count)')
     .eq('slug', slug)
     .single();
     

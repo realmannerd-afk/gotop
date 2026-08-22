@@ -9,6 +9,7 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
   const router = useRouter();
   const [bid, setBid] = useState(Math.max(1, currentHighestBid + 1));
   const [url, setUrl] = useState('');
+  const [name, setName] = useState('');
   
   const [categories, setCategories] = useState<string[]>([]);
   const [selectedCategory, setSelectedCategory] = useState('');
@@ -45,7 +46,7 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
     try {
       const submitRes = await submitListing({
         url,
-        name: '',
+        name: name,
         description: '',
         category: selectedCategory,
         bid
@@ -114,7 +115,18 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
 
       <form onSubmit={handleCheckout} className="mt-6 flex flex-col max-w-2xl mx-auto w-full px-4">
         
-        <div className="flex flex-col md:flex-row items-center bg-white p-1.5 rounded-2xl shadow-sm border border-gray-200 transition-all focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:border-emerald-400">
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center bg-white p-1.5 rounded-2xl shadow-sm border border-gray-200 transition-all focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:border-emerald-400">
+            <input 
+              type="text" 
+              placeholder="Project Name (e.g. Cursor)" 
+              required
+              value={name}
+              onChange={e => setName(e.target.value)}
+              className="w-full bg-transparent px-4 py-3 text-base font-bold text-gray-900 placeholder:text-gray-400 focus:outline-none"
+            />
+          </div>
+          <div className="flex flex-col md:flex-row items-center bg-white p-1.5 rounded-2xl shadow-sm border border-gray-200 transition-all focus-within:ring-4 focus-within:ring-emerald-500/10 focus-within:border-emerald-400">
           <div className="relative flex-1 w-full flex items-center min-w-0">
             <span className="absolute left-4 w-6 h-6 rounded overflow-hidden flex items-center justify-center text-gray-400 shrink-0">
               {domain ? (
@@ -167,6 +179,7 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
           ))}
         </div>
 
+      </div>
       </form>
     </section>
   );

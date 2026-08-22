@@ -32,8 +32,12 @@ export function ProductCard({ product, rank, placement = 'leaderboard' }: Produc
       
       <div className="flex-1 min-w-0 flex flex-col justify-center">
         <Link href={`/product/${product.slug}`} className="group inline-flex items-center gap-2 mb-0.5 w-fit">
-          <h3 className="font-bold text-gray-900 group-hover:text-emerald-600 transition-colors text-base md:text-lg truncate">
+          <h3 className="font-bold text-gray-900 group-hover:text-emerald-600 transition-colors text-base md:text-lg truncate flex items-center gap-2">
             {product.name}
+            <span className="relative flex h-2 w-2 shrink-0">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+            </span>
           </h3>
           <span className="text-xs font-semibold px-2 py-0.5 rounded-md bg-gray-100 text-gray-600">
             {product.category}
@@ -41,7 +45,7 @@ export function ProductCard({ product, rank, placement = 'leaderboard' }: Produc
         </Link>
         <p className="text-sm text-gray-600 line-clamp-1 mb-1">{product.description}</p>
         <p className="text-xs text-gray-400 font-medium">
-          {(product.currentBid * 12 + 342)} clicks
+          {product.clicks || 0} clicks
         </p>
       </div>
 
