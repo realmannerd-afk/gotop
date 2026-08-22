@@ -1,28 +1,77 @@
 'use server';
+
+import { createClient } from '@supabase/supabase-js';
 import DodoPayments from 'dodopayments';
+import { createHash, randomBytes } from 'crypto';
 import { cookies } from 'next/headers';
 
-import { getCategories } from '@/data/db';
-import { fetchMetadata } from '@/lib/metadata';
-import { normalizeUrl, isSafeUrl } from '@/lib/url';
-import { createClient } from '@supabase/supabase-js';
-import { randomBytes, createHash } from 'crypto';
+function normalizeUrl(url: string) {
+  let normalized = url.toLowerCase().trim();
+  if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
+    normalized = 'https://' + normalized;
+  }
+  return normalized;
+}
 
-export async function fetchCategories() {
-  return await getCategories();
+async function isSafeUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return false;
+    const hostname = parsed.hostname.toLowerCase();
+    if (hostname === 'localhost' || hostname.endsWith('.local') || hostname.startsWith('10.') || hostname.startsWith('192.168.') || hostname.startsWith('127.')) {
+      return false;
+    }
+    return true;
+  } catch (err) {
+    return false;
+  }
 }
 
 export async function fetchUrlMetadata(url: string) {
-  let targetUrl = url;
-  if (!/^https?:\/\//i.test(targetUrl)) {
-    targetUrl = 'https://' + targetUrl;
+  try {
+    const normalizedUrl = normalizeUrl(url);
+    const safe = await isSafeUrl(normalizedUrl);
+    if (!safe) return { error: 'Invalid or unsafe URL.' };
+    const res = await fetch(normalizedUrl, { 
+      headers: { 'User-Agent': 'Mozilla/5.0' },
+      redirect: 'follow', 
+      signal: AbortSignal.timeout(5000) 
+    });
+    if (!res.ok) return { error: `HTTP ${res.status}: Failed to reach website.` };
+    const contentType = res.headers.get('content-type');
+    if (!contentType || !contentType.includes('text/html')) return { error: 'URL does not point to HTML.' };
+    const text = await res.text();
+    const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
+    const descMatch = text.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i) || 
+                      text.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["'][^>]*>/i);
+    return {
+      targetUrl: res.url,
+      data: {
+        title: titleMatch ? titleMatch[1].trim() : '',
+        description: descMatch ? descMatch[1].trim() : ''
+      }
+    };
+  } catch (err) {
+    return { error: 'Failed to fetch metadata.' };
   }
-  const safe = await isSafeUrl(targetUrl);
-  if (!safe) {
-    return { error: 'Invalid or unsafe URL' };
+}
+
+export async function getCategories() {
+  try {
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { auth: { persistSession: false } }
+    );
+    const { data } = await supabaseAdmin.from('categories').select('*').order('name');
+    return data || [];
+  } catch (err) {
+    return [];
   }
-  const meta = await fetchMetadata(targetUrl);
-  return { data: meta, targetUrl };
+}
+
+export async function fetchCategories() {
+  return await getCategories();
 }
 
 export async function submitListing(data: {
@@ -33,8 +82,6 @@ export async function submitListing(data: {
   bid: number;
 }) {
   try {
-    
-    // Auto-fetch metadata if not provided
     if (!data.name || !data.description) {
       const metaRes = await fetchUrlMetadata(data.url);
       if (!metaRes.error && metaRes.data) {
@@ -46,26 +93,19 @@ export async function submitListing(data: {
       }
     }
     
-    // 1. Validation
-
     const safe = await isSafeUrl(data.url);
     if (!safe) return { error: 'Invalid or unsafe URL' };
     
     const normalizedUrl = normalizeUrl(data.url);
     if (data.name.length < 1 || data.name.length > 200) return { error: 'Name is invalid' };
     if (data.description.length < 5 || data.description.length > 1500) return { error: 'Description is invalid' };
-    
     if (data.bid < 1 || !Number.isInteger(data.bid)) return { error: 'Minimum bid is $1, whole numbers only' };
 
-    // Get categories to validate
     const categories = await getCategories();
     const cat = categories.find(c => c.name === data.category);
     if (!cat) return { error: 'Invalid category' };
 
-    // Initialize Service Role Client (throws if not set)
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      throw new Error('Server configuration error: missing service role key');
-    }
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Missing service role key');
     
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -73,246 +113,71 @@ export async function submitListing(data: {
       { auth: { persistSession: false } }
     );
 
-    // 2. Duplicate Check
+    // Duplicate Check
     const { data: existing } = await supabaseAdmin
       .from('listings')
       .select('id, status')
       .eq('url', normalizedUrl)
+      .eq('status', 'active')
       .maybeSingle();
-      
+
     if (existing) {
-      if (existing.status === 'active') {
-        return { error: 'This product is already listed.' };
-      }
-      if (existing.status === 'pending') {
-        // User aborted previous checkout, delete it so they can try again cleanly
-        await supabaseAdmin.from('bids').delete().eq('listing_id', existing.id);
-        await supabaseAdmin.from('listings').delete().eq('id', existing.id);
-      }
+      return { error: 'This website is already on the leaderboard. Go to its management page to rebid.' };
     }
 
-    // Generate slug
-    let slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-    const { data: slugCheck } = await supabaseAdmin.from('listings').select('id').eq('slug', slug).maybeSingle();
-    if (slugCheck) {
-      slug = `${slug}-${Math.floor(Math.random() * 1000)}`;
-    }
-
-    // 3. Insert Listing
-    const { data: listing, error: listingError } = await supabaseAdmin
-      .from('listings')
-      .insert({
-        name: data.name,
-        slug,
-        url: normalizedUrl,
-        description: data.description,
-        category_id: cat.id,
-        current_bid: data.bid,
-        status: 'pending'
-      })
-      .select('id')
-      .single();
-
-    if (listingError || !listing) {
-      if (listingError?.code === '23505') {
-        return { error: 'This product is already listed.' };
-      }
-      throw listingError || new Error('Failed to create listing');
-    }
-
-    // 4. Insert Bid
-    const { error: bidError } = await supabaseAdmin
-      .from('bids')
-      .insert({
-        listing_id: listing.id,
-        amount: data.bid,
-        previous_amount: 0,
-        amount_paid: data.bid,
-        status: 'pending'
-      });
-
-    if (bidError) {
-      // Rollback
-      await supabaseAdmin.from('listings').delete().eq('id', listing.id);
-      throw bidError;
-    }
-
-    // 5. Generate and Insert Token
+    const listingId = crypto.randomUUID();
+    const bidId = crypto.randomUUID();
+    const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
     const rawToken = randomBytes(32).toString('hex');
     const tokenHash = createHash('sha256').update(rawToken).digest('hex');
 
-    const { error: accessError } = await supabaseAdmin
-      .from('listing_access')
-      .insert({
-        listing_id: listing.id,
-        token_hash: tokenHash
-      });
+    const safeDescription = data.description.substring(0, 450);
 
-    if (accessError) {
-      // Rollback
-      await supabaseAdmin.from('bids').delete().eq('listing_id', listing.id);
-      await supabaseAdmin.from('listings').delete().eq('id', listing.id);
-      throw accessError;
-    }
+    const dodo = new DodoPayments({ bearerToken: process.env.DODO_BEARER_TOKEN, environment: 'test_mode' /* FORCED TEST MODE */ });
+    
+    const product = await dodo.products.create({
+      name: `Gotop Leaderboard: ${data.name.substring(0, 50)}`,
+      tax_category: 'digital_products',
+      price: {
+         type: 'one_time_price',
+         currency: 'USD',
+         price: data.bid * 100, // Cents
+         discount: 0,
+         purchasing_power_parity: false,
+      }
+    });
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://gotop.lol';
+    
+    const session = await dodo.checkoutSessions.create({
+      product_cart: [{ product_id: product.product_id, quantity: 1 }],
+      return_url: `${appUrl}/success/${listingId}`,
+      metadata: {
+        type: 'initial_bid',
+        listing_id: listingId,
+        bid_id: bidId,
+        url: normalizedUrl,
+        name: data.name.substring(0, 200),
+        slug: slug.substring(0, 100),
+        description: safeDescription,
+        token_hash: tokenHash,
+        amount: data.bid.toString(),
+        category_id: cat.id
+      }
+    });
 
     return { 
       success: true, 
-      listingId: listing.id,
-      token: rawToken // Only returned once!
+      listingId,
+      token: rawToken,
+      checkoutUrl: session.checkout_url || (session as any).payment_link 
     };
-  } catch (error: any /* eslint-disable-line @typescript-eslint/no-explicit-any */) {
-    console.error('Submit error:', error);
-    return { error: 'An unexpected error occurred during submission.' };
-  }
-}
 
-export async function getCheckoutData(listingId: string) {
-  try {
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Missing service role key');
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-      { auth: { persistSession: false } }
-    );
-
-    const { data: listing, error: listingError } = await supabaseAdmin
-      .from('listings')
-      .select('id, name, description, logo_url, status, category_id, categories(name)')
-      .eq('id', listingId)
-      .maybeSingle();
-
-    if (listingError || !listing) return { error: 'Listing not found.' };
-
-    if (listing.status === 'active') return { error: 'This listing is already active.', isAlreadyActive: true };
-    if (listing.status !== 'pending') return { error: `Listing is ${listing.status}.` };
-
-    const { data: bid, error: bidError } = await supabaseAdmin
-      .from('bids')
-      .select('id, amount, status')
-      .eq('listing_id', listingId)
-      .eq('status', 'pending')
-      .maybeSingle();
-
-    if (bidError || !bid) return { error: 'Pending bid not found.' };
-
-    return {
-      data: {
-        listing,
-        bid
-      }
-    };
   } catch (error) {
-    console.error('getCheckoutData error:', error);
-    return { error: 'Database error' };
+    const errMsg = error instanceof Error ? error.message : String(error);
+    return { error: 'Failed to create checkout: ' + errMsg };
   }
 }
-
-export async function processMockPayment(listingId: string) {
-  try {
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Missing service role key');
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
-      { auth: { persistSession: false } }
-    );
-
-    // 1 & 2. Load listing and pending bid
-    const { data: listing } = await supabaseAdmin
-      .from('listings')
-      .select('id, status')
-      .eq('id', listingId)
-      .maybeSingle();
-
-    if (!listing) return { error: 'Listing not found.' };
-    
-    // Idempotency check
-    if (listing.status === 'active') {
-      const { data: payment } = await supabaseAdmin
-        .from('payments')
-        .select('id')
-        .eq('listing_id', listingId)
-        .eq('status', 'completed')
-        .maybeSingle();
-        
-      if (payment) {
-        // Calculate rank
-        const { data: rankData } = await supabaseAdmin
-          .from('listings')
-          .select('id')
-          .eq('status', 'active')
-          .order('current_bid', { ascending: false })
-          .order('bid_placed_at', { ascending: true });
-        
-        const rank = rankData ? rankData.findIndex(l => l.id === listingId) + 1 : 0;
-        return { success: true, rank, currentBid: null }; 
-      }
-    }
-
-    if (listing.status !== 'pending') return { error: `Listing is ${listing.status}.` };
-
-    const { data: bid } = await supabaseAdmin
-      .from('bids')
-      .select('id, amount')
-      .eq('listing_id', listingId)
-      .eq('status', 'pending')
-      .maybeSingle();
-
-    if (!bid) return { error: 'Pending bid not found.' };
-    
-    // OCC Update for the bid (ensures idempotency)
-    const { data: updatedBid, error: bidUpdateError } = await supabaseAdmin
-      .from('bids')
-      .update({ status: 'paid' })
-      .eq('id', bid.id)
-      .eq('status', 'pending')
-      .select('id')
-      .maybeSingle();
-      
-    if (bidUpdateError || !updatedBid) {
-      return { error: 'Payment already processing or failed.' };
-    }
-
-    // 4. Update listing
-    await supabaseAdmin
-      .from('listings')
-      .update({ 
-        status: 'active',
-        current_bid: bid.amount,
-        bid_placed_at: new Date().toISOString()
-      })
-      .eq('id', listingId);
-
-    // 5. Create payment record
-    await supabaseAdmin
-      .from('payments')
-      .insert({
-        listing_id: listingId,
-        bid_id: bid.id,
-        amount: bid.amount,
-        status: 'completed',
-        provider: 'mock',
-        provider_payment_id: `mock_txn_${randomBytes(8).toString('hex')}`
-      });
-
-    // 6. Calculate Rank
-    const { data: rankData } = await supabaseAdmin
-      .from('listings')
-      .select('id')
-      .eq('status', 'active')
-      .order('current_bid', { ascending: false })
-      .order('bid_placed_at', { ascending: true });
-    
-    const rank = rankData ? rankData.findIndex(l => l.id === listingId) + 1 : 0;
-
-    return { success: true, rank, currentBid: bid.amount };
-  } catch (error) {
-    console.error('processMockPayment error:', error);
-    return { error: 'Database error' };
-  }
-}
-
-
-
 
 export async function trackImpressions(listingIds: string[], placement: string) {
   try {
@@ -333,7 +198,6 @@ export async function trackImpressions(listingIds: string[], placement: string) 
       });
     }
 
-    // deduplication check in DB: check if these impressions were recorded in the last 1 hour
     const { data: recent } = await supabase
       .from('impressions')
       .select('listing_id')
@@ -355,63 +219,20 @@ export async function trackImpressions(listingIds: string[], placement: string) 
     await supabase.from('impressions').insert(payload);
     return { success: true };
   } catch (err) {
-    console.error('Failed to track impressions', err);
     return { success: false };
   }
 }
 
-export async function createDodoCheckout(listingId: string) {
+export async function getCheckoutData(listingId: string) {
   try {
-    if (!process.env.DODO_BEARER_TOKEN) throw new Error('Missing DODO_BEARER_TOKEN');
-    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Missing service role key');
-    
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
       { auth: { persistSession: false } }
     );
-
-    const { data: listing } = await supabaseAdmin.from('listings').select('id, name, status').eq('id', listingId).maybeSingle();
-    if (!listing) return { error: 'Listing not found.' };
-    if (listing.status !== 'pending') return { error: 'Listing is not pending.' };
-
-    const { data: bid } = await supabaseAdmin.from('bids').select('id, amount').eq('listing_id', listingId).eq('status', 'pending').maybeSingle();
-    if (!bid) return { error: 'Pending bid not found.' };
-
-    const dodo = new DodoPayments({ bearerToken: process.env.DODO_BEARER_TOKEN, environment: 'test_mode' /* FORCED TEST MODE */ });
-    
-    // Create product dynamically for this bid
-    const product = await dodo.products.create({
-      name: `Gotop Leaderboard: ${listing.name}`,
-      tax_category: 'digital_products',
-      price: {
-         type: 'one_time_price',
-         currency: 'USD',
-         price: bid.amount * 100, // Cents
-         discount: 0,
-         purchasing_power_parity: false,
-      }
-    });
-
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://gotop.lol';
-    
-    const session = await dodo.checkoutSessions.create({
-      product_cart: [{ product_id: product.product_id, quantity: 1 }],
-      metadata: {
-         listing_id: listingId,
-         bid_id: bid.id,
-         type: 'initial_bid'
-      },
-      return_url: `${appUrl}/checkout/${listingId}?status=success`
-    });
-
-    return { checkoutUrl: session.checkout_url };
+    const { data: listing } = await supabaseAdmin.from('listings').select('*').eq('id', listingId).maybeSingle();
+    return { data: { listing }, isAlreadyActive: listing?.status === 'active' };
   } catch (error) {
-    console.error('Dodo error:', error);
-    const errMsg = error instanceof Error ? error.message : String(error);
-      return { error: 'Failed to create checkout: ' + errMsg };
+    return { error: 'Database error' };
   }
 }
-
-
-

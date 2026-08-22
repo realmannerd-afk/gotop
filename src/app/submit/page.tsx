@@ -1,6 +1,6 @@
-"use client";
+'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowRight, Loader2, Target } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -8,274 +8,244 @@ import { fetchCategories, fetchUrlMetadata, submitListing } from '@/app/actions'
 
 type Step = 'url' | 'details' | 'bid';
 
-function SubmitForm() {
+export default function SubmitForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialUrl = searchParams.get('url') || '';
   const initialBid = searchParams.get('bid') ? parseInt(searchParams.get('bid')!) : 5; 
 
   const [step, setStep] = useState<Step>('url');
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [categories, setCategories] = useState<string[]>([]);
-
+  
   const [formData, setFormData] = useState({
     url: initialUrl,
     name: '',
     description: '',
     category: '',
-    bid: Math.max(1, initialBid),
+    bid: initialBid
   });
 
-  useEffect(() => {
-    fetchCategories().then((data) => {
-      if (data) {
-        setCategories(data.map(d => d.name));
-        if (!formData.category && data.length > 0) {
-          setFormData(prev => ({ ...prev, category: data[0].name }));
-        }
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [metaLoading, setMetaLoading] = useState(false);
 
-  const handleUrlSubmit = async (e: React.FormEvent, forceUrl?: string) => {
-    e?.preventDefault();
-    const targetUrl = forceUrl || formData.url;
-    if (!targetUrl) return;
-    
+  const handleNext = async (e: React.FormEvent) => {
+    e.preventDefault();
     setErrorMsg('');
-    setLoading(true);
     
-    try {
-      const res = await fetchUrlMetadata(targetUrl);
+    if (step === 'url') {
+      if (!formData.url) return setErrorMsg('URL is required');
+      
+      setMetaLoading(true);
+      const res = await fetchUrlMetadata(formData.url);
+      setMetaLoading(false);
+      
       if (res.error) {
         setErrorMsg(res.error);
-        setLoading(false);
         return;
       }
       
-      setFormData(prev => ({
-        ...prev,
-        url: res.targetUrl || targetUrl,
-        name: res.data?.title || '',
-        description: res.data?.description || '',
-      }));
+      if (res.data) {
+        setFormData(prev => ({
+          ...prev,
+          url: res.targetUrl || prev.url,
+          name: res.data?.title || '',
+          description: res.data?.description || ''
+        }));
+      }
       setStep('details');
-    } catch (_err) {
-      setErrorMsg('Failed to process URL');
-    } finally {
-      setLoading(false);
-    }
-  };
+    } else if (step === 'details') {
+      if (!formData.name) return setErrorMsg('Name is required');
+      if (!formData.description) return setErrorMsg('Description is required');
+      if (!formData.category) return setErrorMsg('Please select a category');
+      setStep('bid');
+    } else if (step === 'bid') {
+      if (formData.bid < 1) return setErrorMsg('Minimum bid is $1');
+      
+      setLoading(true);
+      try {
+        const res = await submitListing(formData);
+        if (res.error) {
+          setErrorMsg(res.error);
+          setLoading(false);
+          return;
+        }
 
-  useEffect(() => {
-    if (initialUrl && step === 'url' && !loading) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      handleUrlSubmit(new Event('submit') as unknown as React.FormEvent, initialUrl);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const handleDetailsSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-    if (formData.name.length < 2) return setErrorMsg('Name must be at least 2 characters');
-    if (formData.description.length < 20) return setErrorMsg('Description must be at least 20 characters');
-    setStep('bid');
-  };
-
-  const handleBidSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setErrorMsg('');
-    if (formData.bid < 1) return setErrorMsg('Minimum bid is $1');
-
-    setLoading(true);
-    try {
-      const res = await submitListing(formData);
-      if (res.error) {
-        setErrorMsg(res.error);
+        if (res.success && res.checkoutUrl) {
+          if (res.listingId && res.token) {
+            sessionStorage.setItem(`manage_token_${res.listingId}`, res.token);
+          }
+          window.location.href = res.checkoutUrl;
+        }
+      } catch (err) {
+        setErrorMsg('An unexpected error occurred. Please try again.');
         setLoading(false);
-        return;
       }
-
-      if (res.success && res.listingId && res.token) {
-        sessionStorage.setItem(`manage_token_${res.listingId}`, res.token);
-        router.push(`/checkout/${res.listingId}`);
-      }
-    } catch (_err) {
-      setErrorMsg('An unexpected error occurred');
-      setLoading(false);
     }
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-12 md:py-24">
-      <div className="mb-12">
-        <h1 className="text-3xl md:text-4xl font-bold tracking-tight mb-4">Submit your product</h1>
-        <div className="flex items-center gap-2 text-sm font-medium text-gray-500">
-          <span className={cn(step === 'url' ? 'text-gray-900 dark:text-white' : 'text-gray-400')}>1. URL</span>
-          <ArrowRight className="w-4 h-4" />
-          <span className={cn(step === 'details' ? 'text-gray-900 dark:text-white' : 'text-gray-400')}>2. Details</span>
-          <ArrowRight className="w-4 h-4" />
-          <span className={cn(step === 'bid' ? 'text-gray-900 dark:text-white' : 'text-gray-400')}>3. Bid & Pay</span>
-        </div>
+    <div className="w-full max-w-xl mx-auto py-12 px-4 sm:px-6">
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Submit to Leaderboard</h1>
+        <p className="text-gray-500">Climb the ranks and get more eyes on your project.</p>
       </div>
 
-      <div className="bg-white dark:bg-gray-950 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 md:p-8 shadow-sm">
-        
-        {errorMsg && (
-          <div className="mb-6 p-4 rounded-xl bg-red-50 text-red-600 text-sm font-medium border border-red-100">
-            {errorMsg}
-          </div>
-        )}
-
-        {step === 'url' && (
-          <form onSubmit={handleUrlSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="url" className="block text-sm font-medium mb-1">Product URL</label>
-              <input
-                type="url"
-                id="url"
-                required
-                placeholder="https://your-product.com"
-                className="block w-full px-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                value={formData.url}
-                onChange={(e) => setFormData(prev => ({ ...prev, url: e.target.value }))}
-              />
+      <div className="flex items-center justify-between mb-8 relative">
+        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-gray-100 -z-10 rounded" />
+        {['url', 'details', 'bid'].map((s, i) => (
+          <div key={s} className="flex flex-col items-center gap-2 bg-white px-2">
+            <div className={cn(
+              "w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors border-2",
+              step === s ? "border-blue-600 bg-blue-600 text-white" : 
+              (i < ['url', 'details', 'bid'].indexOf(step) ? "border-blue-600 text-blue-600 bg-white" : "border-gray-200 text-gray-400 bg-white")
+            )}>
+              {i + 1}
             </div>
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 text-sm font-medium rounded-xl text-white bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50"
-            >
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Continue'}
-            </button>
-          </form>
-        )}
+            <span className="text-xs font-medium text-gray-500 capitalize">{s}</span>
+          </div>
+        ))}
+      </div>
 
-        {step === 'details' && (
-          <form onSubmit={handleDetailsSubmit} className="space-y-6">
-            <div className="space-y-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 sm:p-8">
+        <form onSubmit={handleNext} className="space-y-6">
+          
+          {step === 'url' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium mb-1">Product Name</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Website URL</label>
+                <input
+                  type="url"
+                  required
+                  placeholder="https://example.com"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
+                  value={formData.url}
+                  onChange={e => setFormData({...formData, url: e.target.value})}
+                />
+              </div>
+            </div>
+          )}
+
+          {step === 'details' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
                 <input
                   type="text"
-                  id="name"
                   required
                   maxLength={80}
-                  className="block w-full px-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={e => setFormData({...formData, name: e.target.value})}
                 />
               </div>
               
               <div>
-                <label htmlFor="description" className="block text-sm font-medium mb-1">Short Description (min 20 chars)</label>
-                <textarea
-                  id="description"
-                  required
-                  maxLength={500}
-                  minLength={20}
-                  rows={2}
-                  className="block w-full px-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 focus:border-transparent resize-none"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                />
-                <p className="text-xs text-gray-500 mt-1 text-right">{formData.description.length}/500</p>
-              </div>
-
-              <div>
-                <label htmlFor="category" className="block text-sm font-medium mb-1">Category</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
                 <select
-                  id="category"
                   required
-                  className="block w-full px-3 py-3 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors bg-white"
                   value={formData.category}
-                  onChange={(e) => setFormData(prev => ({ ...prev, category: e.target.value }))}
+                  onChange={e => setFormData({...formData, category: e.target.value})}
                 >
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
+                  <option value="" disabled>Select a category</option>
+                  <option value="AI">AI</option>
+                  <option value="Apps">Apps</option>
+                  <option value="Browser Extensions">Browser Extensions</option>
+                  <option value="Crypto">Crypto</option>
+                  <option value="Databases">Databases</option>
+                  <option value="Design">Design</option>
+                  <option value="DevTools">DevTools</option>
+                  <option value="E-Commerce">E-Commerce</option>
+                  <option value="Education">Education</option>
+                  <option value="Finance">Finance</option>
+                  <option value="Gaming">Gaming</option>
+                  <option value="Hardware">Hardware</option>
+                  <option value="Health">Health</option>
+                  <option value="Marketing">Marketing</option>
+                  <option value="Open Source">Open Source</option>
+                  <option value="Personal">Personal</option>
+                  <option value="Productivity">Productivity</option>
+                  <option value="SaaS">SaaS</option>
+                  <option value="Social">Social</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
-            </div>
 
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => { setErrorMsg(''); setStep('url'); }}
-                className="px-6 py-3 text-sm font-medium rounded-xl text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
-              >
-                Back
-              </button>
-              <button
-                type="submit"
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium rounded-xl text-white bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors"
-              >
-                Continue
-              </button>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (Max 500 chars)</label>
+                <textarea
+                  required
+                  rows={3}
+                  maxLength={500}
+                  className="w-full px-4 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors resize-none"
+                  value={formData.description}
+                  onChange={e => setFormData({...formData, description: e.target.value})}
+                />
+              </div>
             </div>
-          </form>
-        )}
+          )}
 
-        {step === 'bid' && (
-          <form onSubmit={handleBidSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-800 dark:text-emerald-300 border border-emerald-100 dark:border-emerald-800/50 flex items-start gap-3">
-                <Target className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                <p className="text-sm leading-relaxed">
-                  The higher your bid, the higher you rank on the leaderboard. Ties are broken by who bid first. You can increase your bid at any time. Minimum bid is $1.
+          {step === 'bid' && (
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-300">
+              <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 flex gap-3 items-start">
+                <Target className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" />
+                <p className="text-sm text-blue-900 leading-relaxed">
+                  Higher bids rank higher on the leaderboard. If someone outbids you later, your rank will drop until you increase your bid.
                 </p>
               </div>
-              
+
               <div>
-                <label htmlFor="bid" className="block text-sm font-medium mb-1">Your Bid (USD)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Your Bid (USD)</label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <span className="text-gray-500 font-medium">$</span>
-                  </div>
+                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
                   <input
                     type="number"
-                    id="bid"
-                    min="2"
+                    min="1"
                     step="1"
                     required
-                    className="block w-full pl-8 pr-3 py-4 text-xl font-bold border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-gray-900 focus:border-transparent"
+                    className="w-full pl-8 pr-4 py-3 text-lg font-semibold border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-colors"
                     value={formData.bid}
-                    onChange={(e) => setFormData(prev => ({ ...prev, bid: parseInt(e.target.value) || 0 }))}
+                    onChange={e => setFormData({...formData, bid: parseInt(e.target.value) || 0})}
                   />
                 </div>
               </div>
             </div>
+          )}
 
-            <div className="flex gap-3">
+          {errorMsg && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-lg text-sm text-red-600">
+              {errorMsg}
+            </div>
+          )}
+
+          <div className="pt-4 flex gap-3">
+            {step !== 'url' && (
               <button
                 type="button"
-                onClick={() => { setErrorMsg(''); setStep('details'); }}
-                className="px-6 py-3 text-sm font-medium rounded-xl text-gray-700 bg-gray-100 hover:bg-gray-200 dark:text-gray-300 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+                onClick={() => setStep(step === 'bid' ? 'details' : 'url')}
+                className="px-6 py-2.5 text-sm font-medium text-gray-600 bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
               >
                 Back
               </button>
-              <button
-                type="submit"
-                disabled={loading || formData.bid < 2}
-                className="flex-1 flex items-center justify-center gap-2 px-6 py-3 text-sm font-medium rounded-xl text-white bg-gray-900 hover:bg-gray-800 dark:bg-white dark:text-gray-900 dark:hover:bg-gray-100 transition-colors disabled:opacity-50"
-              >
-                {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Create Listing'}
-              </button>
-            </div>
-          </form>
-        )}
+            )}
+            
+            <button
+              type="submit"
+              disabled={loading || metaLoading}
+              className="flex-1 flex items-center justify-center gap-2 bg-black hover:bg-gray-800 text-white px-6 py-2.5 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {(loading || metaLoading) ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : step === 'bid' ? (
+                'Proceed to Payment'
+              ) : (
+                <>Next <ArrowRight className="w-4 h-4" /></>
+              )}
+            </button>
+          </div>
+
+        </form>
       </div>
     </div>
-  );
-}
-
-export default function SubmitPage() {
-  return (
-    <Suspense fallback={<div className="p-24 text-center">Loading...</div>}>
-      <SubmitForm />
-    </Suspense>
   );
 }
