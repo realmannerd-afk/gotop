@@ -6,21 +6,21 @@ export default function RulesPage() {
         
         <section className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-100">
           <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-            ?? 1. The Ranking System
+            1. The Ranking System
           </h2>
           <p>The leaderboard is simply a ranked list based on who is paying the most money. Whoever has the highest bid sits at the #1 spot at the top of the page. If two people have the exact same bid amount, whoever paid for that amount first wins the tiebreaker and gets the higher spot.</p>
         </section>
 
         <section className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-100">
           <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-            ?? 2. A New Challenger
+            2. A New Challenger
           </h2>
           <p>Let's say the person currently at the #1 spot paid <strong>$10</strong>. A brand new user visits the homepage, wants that top spot, and enters their own website URL with a bid of <strong>$11</strong>. They pay the $11, and instantly their website is placed at the #1 spot. The person who used to be #1 gets pushed down to #2.</p>
         </section>
 
         <section className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-100">
           <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-            ??? 3. Fighting Back (Increasing a Bid)
+            3. Fighting Back (Increasing a Bid)
           </h2>
           <p>The person who just got pushed to #2 doesn't have to start over and pay a full $12 to get their spot back!</p>
           <p className="mt-3">Instead, they open their secret <strong>Management Link</strong> (which is provided securely on the success page when they first buy their spot). From there, they can choose to increase their bid to <strong>$12</strong>.</p>
@@ -29,7 +29,7 @@ export default function RulesPage() {
 
         <section className="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-gray-100">
           <h2 className="text-xl font-bold text-gray-900 mb-3 flex items-center gap-2">
-            ?? 4. Content Guidelines
+            4. Content Guidelines
           </h2>
           <p>We accept SaaS apps, developer tools, newsletters, portfolios, and social links. The minimum bid to enter the board is $1. We reserve the right to remove any illegal, malicious, or highly inappropriate links without refund.</p>
         </section>
@@ -38,4 +38,5 @@ export default function RulesPage() {
     </div>
   );
 }
+
 
