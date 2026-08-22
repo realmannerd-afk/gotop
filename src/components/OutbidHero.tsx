@@ -1,3 +1,4 @@
+'use client';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { fetchCategories, submitListing } from '@/app/actions';
@@ -72,3 +73,4 @@ export function OutbidHero({ currentHighestBid }: { currentHighestBid: number })
     </form>
   );
 }
+
