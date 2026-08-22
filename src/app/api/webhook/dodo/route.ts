@@ -9,18 +9,6 @@ export const POST = async (req: NextRequest) => {
       console.log(`Received Dodo Webhook: ${payload.type}`);
 
       if (payload.type === 'payment.succeeded') {
-        const { listing_id, bid_id, type } = payload.data.metadata as any;
-        
-        if (!listing_id || !bid_id) {
-          console.error('Missing metadata in payment payload');
-          return; // Invalid payload, do not retry
-        }
-
-        if (payload.data.currency && payload.data.currency.toUpperCase() !== 'USD') {
-          console.error(`Invalid currency: ${payload.data.currency}`);
-          return; // Invalid payload, do not retry
-        }
-
         if (!process.env.SUPABASE_SERVICE_ROLE_KEY) throw new Error('Missing service role key');
         const supabaseAdmin = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -28,43 +16,84 @@ export const POST = async (req: NextRequest) => {
           { auth: { persistSession: false } }
         );
 
+        const paymentId = payload.data.payment_id;
+        const actualAmountCents = payload.data.total_amount;
+        const actualCurrency = payload.data.currency ? payload.data.currency.toUpperCase() : 'UNKNOWN';
+        const actualAmountDollars = actualAmountCents / 100;
+        
+        const { listing_id, bid_id, type } = payload.data.metadata as any || {};
+
         // 1. Idempotency Check: Have we already completed this exact payment?
         const { data: existingPayment, error: existingError } = await supabaseAdmin
           .from('payments')
-          .select('id')
-          .eq('provider_id', payload.data.payment_id)
+          .select('id, processing_status')
+          .eq('provider_id', paymentId)
           .maybeSingle();
 
         if (existingError) throw new Error('Database error checking idempotency');
         if (existingPayment) {
-          console.log('Payment already processed. Idempotent success.');
+          console.log(`Payment ${paymentId} already processed (status: ${existingPayment.processing_status}). Idempotent success.`);
           return; // Return 200, already done
         }
 
-        // 2. Fetch Bid
-        const { data: bid, error: bidFetchError } = await supabaseAdmin
-          .from('bids')
-          .select('id, amount, previous_amount, amount_paid, status')
-          .eq('id', bid_id)
-          .maybeSingle();
+        // ==========================================
+        // VALIDATION PHASE
+        // ==========================================
+        let isValid = true;
+        let processingStatus = 'processed';
 
-        if (bidFetchError) throw new Error('Database error fetching bid');
-        if (!bid) {
-          console.error(`Bid ${bid_id} not found`);
-          return; // Invalid data
+        // Validate Metadata UUIDs to prevent postgres crashes
+        let cleanListingId = null;
+        let cleanBidId = null;
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (listing_id && uuidRegex.test(listing_id)) cleanListingId = listing_id;
+        if (bid_id && uuidRegex.test(bid_id)) cleanBidId = bid_id;
+
+        if (!cleanListingId || !cleanBidId || !type) {
+          console.error(`Payment ${paymentId} missing or invalid metadata.`);
+          isValid = false;
+          processingStatus = 'reconciliation_required';
         }
 
-        // 3. Verify Amount
-        const amountPaidDollars = payload.data.total_amount / 100;
-        if (amountPaidDollars !== bid.amount_paid) {
-          console.error(`Amount mismatch: expected $${bid.amount_paid}, got $${amountPaidDollars}`);
-          return; // Invalid data
+        // Validate Currency
+        if (actualCurrency !== 'USD') {
+          console.error(`Payment ${paymentId} invalid currency: ${actualCurrency}.`);
+          isValid = false;
+          processingStatus = 'reconciliation_required';
         }
 
-        // 4. State Transitions (if bid is still pending)
-        // Note: If a previous webhook crashed right after updating the bid, bid.status might already be 'paid'.
-        // That's fine, we skip step 4 and just insert the payment record in step 5.
-        if (bid.status === 'pending') {
+        // Fetch Bid for Amount Validation and State Transitions
+        let bid = null;
+        if (cleanBidId) {
+          const { data: fetchedBid, error: bidFetchError } = await supabaseAdmin
+            .from('bids')
+            .select('id, amount, previous_amount, amount_paid, status')
+            .eq('id', cleanBidId)
+            .maybeSingle();
+
+          if (bidFetchError) throw new Error('Database error fetching bid');
+          if (fetchedBid) {
+            bid = fetchedBid;
+            
+            // Validate Amount
+            if (actualAmountDollars !== bid.amount_paid) {
+              console.error(`Payment ${paymentId} amount mismatch: expected $${bid.amount_paid}, got $${actualAmountDollars}`);
+              isValid = false;
+              processingStatus = 'reconciliation_required';
+            }
+          } else {
+             console.error(`Payment ${paymentId} references unknown bid_id: ${cleanBidId}`);
+             isValid = false;
+             processingStatus = 'reconciliation_required';
+          }
+        }
+
+        // ==========================================
+        // BUSINESS TRANSACTION PHASE
+        // ==========================================
+        
+        // Only apply business transaction if VALID and bid is currently PENDING
+        if (isValid && bid && bid.status === 'pending') {
           if (type === 'initial_bid') {
             const { error: listingError } = await supabaseAdmin
               .from('listings')
@@ -73,7 +102,8 @@ export const POST = async (req: NextRequest) => {
                 current_bid: bid.amount,
                 bid_placed_at: new Date().toISOString()
               })
-              .eq('id', listing_id);
+              .eq('id', cleanListingId)
+              .eq('status', 'pending');
 
             if (listingError) throw new Error('Database error activating listing');
             
@@ -84,7 +114,7 @@ export const POST = async (req: NextRequest) => {
                 current_bid: bid.amount,
                 bid_placed_at: new Date().toISOString()
               })
-              .eq('id', listing_id)
+              .eq('id', cleanListingId)
               .eq('status', 'active')
               .eq('current_bid', bid.previous_amount) // OCC
               .select('id')
@@ -93,54 +123,52 @@ export const POST = async (req: NextRequest) => {
             if (listingError) throw new Error('Database error applying OCC to listing');
             
             if (!updatedListing) {
-              console.log(`OCC conflict for rebid ${bid_id}. Listing modified before payment completed.`);
+              console.log(`OCC conflict for rebid ${cleanBidId}. Listing modified before payment completed.`);
               
               const { error: bidFailError } = await supabaseAdmin
                 .from('bids')
                 .update({ status: 'failed' })
-                .eq('id', bid_id);
+                .eq('id', cleanBidId);
               if (bidFailError) throw new Error('Database error marking bid as failed due to OCC');
               
-              const { error: paymentInsertError } = await supabaseAdmin
-                .from('payments')
-                .insert({
-                  listing_id,
-                  bid_id: bid.id,
-                  amount: amountPaidDollars,
-                  provider: 'dodopayments',
-                  provider_id: payload.data.payment_id,
-                  status: 'completed'
-                });
-              if (paymentInsertError) throw new Error('Database error inserting OCC failed payment');
-              
-              return; // We successfully processed the OCC failure, so we stop here and return 200.
+              processingStatus = 'reconciliation_required';
+              isValid = false; // Prevents updating bid to 'paid'
             }
           }
 
-          // Mark bid as paid
-          const { error: bidUpdateError } = await supabaseAdmin
-            .from('bids')
-            .update({ status: 'paid' })
-            .eq('id', bid_id);
-            
-          if (bidUpdateError) throw new Error('Database error updating bid status');
+          if (isValid) {
+            // Mark bid as paid
+            const { error: bidUpdateError } = await supabaseAdmin
+              .from('bids')
+              .update({ status: 'paid' })
+              .eq('id', cleanBidId);
+              
+            if (bidUpdateError) throw new Error('Database error updating bid status');
+          }
         }
 
-        // 5. Finalize by storing the successful payment intent
+        // ==========================================
+        // FINANCIAL LEDGER COMMIT PHASE
+        // ==========================================
+        
+        // Finalize by storing the successful payment intent no matter what!
         const { error: paymentInsertError } = await supabaseAdmin
           .from('payments')
           .insert({
-            listing_id,
-            bid_id: bid.id,
-            amount: amountPaidDollars,
+            listing_id: cleanListingId, // Automatically null if invalid
+            bid_id: cleanBidId, // Automatically null if invalid
+            amount: actualAmountDollars,
+            expected_amount: bid ? bid.amount_paid : null,
+            currency: actualCurrency,
             provider: 'dodopayments',
-            provider_id: payload.data.payment_id,
-            status: 'completed'
+            provider_payment_id: paymentId,
+            status: 'completed', // The money was captured!
+            processing_status: processingStatus
           });
 
-        if (paymentInsertError) throw new Error('Database error inserting payment record');
+        if (paymentInsertError) throw new Error(`Database error inserting payment ledger record: ${paymentInsertError.message}`);
 
-        console.log(`Successfully processed payment for listing ${listing_id}`);
+        console.log(`Successfully logged payment ${paymentId} with status ${processingStatus}`);
       }
     },
   });
