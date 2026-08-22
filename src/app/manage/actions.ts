@@ -141,7 +141,7 @@ export async function processRebidMock(listingId: string, rawToken: string, newB
 
     const dodo = new DodoPayments({
       bearerToken: process.env.DODO_BEARER_TOKEN,
-      environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode'
+      environment: 'test_mode' /* FORCED TEST MODE */
     });
 
     const product = await dodo.products.create({
@@ -201,3 +201,4 @@ export async function updateListingDetails(listingId: string, rawToken: string, 
     return { error: error.message || 'Database error' };
   }
 }
+

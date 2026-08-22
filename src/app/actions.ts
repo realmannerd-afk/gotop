@@ -378,7 +378,7 @@ export async function createDodoCheckout(listingId: string) {
     const { data: bid } = await supabaseAdmin.from('bids').select('id, amount').eq('listing_id', listingId).eq('status', 'pending').maybeSingle();
     if (!bid) return { error: 'Pending bid not found.' };
 
-    const dodo = new DodoPayments({ bearerToken: process.env.DODO_BEARER_TOKEN, environment: process.env.NODE_ENV === 'production' ? 'live_mode' : 'test_mode' });
+    const dodo = new DodoPayments({ bearerToken: process.env.DODO_BEARER_TOKEN, environment: 'test_mode' /* FORCED TEST MODE */ });
     
     // Create product dynamically for this bid
     const product = await dodo.products.create({
@@ -411,3 +411,4 @@ export async function createDodoCheckout(listingId: string) {
     return { error: 'Failed to create checkout' };
   }
 }
+
