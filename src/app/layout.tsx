@@ -47,7 +47,7 @@ export default function RootLayout({
                     </Link>
                   </li>
                   <li>
-                    <Link href="/new" className="font-medium transition-colors hover:text-gray-900 dark:hover:text-white text-gray-500 dark:text-gray-400">
+                    <Link href="/rules" className="font-medium transition-colors hover:text-gray-900 dark:hover:text-white text-gray-500 dark:text-gray-400">How it works</Link></li><li><Link href="/new" className="font-medium transition-colors hover:text-gray-900 dark:hover:text-white text-gray-500 dark:text-gray-400">
                       New
                     </Link>
                   </li>
