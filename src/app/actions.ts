@@ -27,33 +27,16 @@ async function isSafeUrl(url: string) {
   }
 }
 
+import { fetchMetadata } from '@/lib/metadata';
 export async function fetchUrlMetadata(url: string) {
-  try {
-    const normalizedUrl = normalizeUrl(url);
-    const safe = await isSafeUrl(normalizedUrl);
-    if (!safe) return { error: 'Invalid or unsafe URL.' };
-    const res = await fetch(normalizedUrl, { 
-      headers: { 'User-Agent': 'Mozilla/5.0' },
-      redirect: 'follow', 
-      signal: AbortSignal.timeout(5000) 
-    });
-    if (!res.ok) return { error: `HTTP ${res.status}: Failed to reach website.` };
-    const contentType = res.headers.get('content-type');
-    if (!contentType || !contentType.includes('text/html')) return { error: 'URL does not point to HTML.' };
-    const text = await res.text();
-    const titleMatch = text.match(/<title[^>]*>([^<]+)<\/title>/i);
-    const descMatch = text.match(/<meta[^>]*name=["']description["'][^>]*content=["']([^"']+)["'][^>]*>/i) || 
-                      text.match(/<meta[^>]*content=["']([^"']+)["'][^>]*name=["']description["'][^>]*>/i);
-    return {
-      targetUrl: res.url,
-      data: {
-        title: titleMatch ? titleMatch[1].trim() : '',
-        description: descMatch ? descMatch[1].trim() : ''
-      }
-    };
-  } catch (err) {
-    return { error: 'Failed to fetch metadata.' };
+  let targetUrl = url;
+  if (!/^https?:\/\//i.test(targetUrl)) {
+    targetUrl = 'https://' + targetUrl;
   }
+  const safe = await isSafeUrl(targetUrl);
+  if (!safe) return { error: 'Invalid or unsafe URL' };
+  const meta = await fetchMetadata(targetUrl);
+  return { data: meta, targetUrl };
 }
 
 export async function getCategories() {
@@ -236,3 +219,4 @@ export async function getCheckoutData(listingId: string) {
     return { error: 'Database error' };
   }
 }
+
