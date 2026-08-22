@@ -3,6 +3,7 @@ import { getLeaderboard } from '@/data/db';
 import { ProductCard } from '@/components/ProductCard';
 import { ImpressionTracker } from '@/components/ImpressionTracker';
 import { OutbidHero } from '@/components/OutbidHero';
+import { RefreshButton } from '@/components/RefreshButton';
 
 export const revalidate = 60;
 
@@ -26,6 +27,8 @@ export default async function Home() {
           <span className="font-semibold text-gray-900">Live</span>
           <span className="text-gray-300">|</span>
           <span>{leaderboard.length} active bids</span>
+          <div className="w-px h-4 bg-gray-200 mx-1"></div>
+          <RefreshButton />
         </div>
       </header>
 

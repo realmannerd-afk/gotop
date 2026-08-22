@@ -1,4 +1,5 @@
 'use server';
+import { revalidatePath } from 'next/cache';
 
 import { createClient } from '@supabase/supabase-js';
 import DodoPayments from 'dodopayments';
@@ -232,4 +233,7 @@ export async function getListingById(listingId: string) {
   } catch(err) {
     return null;
   }
+}
+export async function refreshLeaderboard() {
+  revalidatePath('/');
 }
