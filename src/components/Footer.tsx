@@ -17,7 +17,6 @@ export function Footer() {
           <Link href="/rules" className="hover:text-gray-900 dark:hover:text-white transition-colors">Rules</Link>
           <Link href="/leaderboard" className="hover:text-gray-900 dark:hover:text-white transition-colors">Leaderboard</Link>
           <Link href="/submit" className="hover:text-gray-900 dark:hover:text-white transition-colors">Submit</Link>
-          <Link href="/submit" className="hover:text-gray-900 dark:hover:text-white transition-colors">Submit</Link>
         </div>
       </div>
     </footer>
