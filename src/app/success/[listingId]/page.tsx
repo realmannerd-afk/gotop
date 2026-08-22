@@ -1,11 +1,12 @@
 'use client';
+import React from 'react';
 
 import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { CheckCircle2, ShieldCheck, Copy, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 
-export default function SuccessPage() {
+function SuccessPageContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const listingId = params.listingId as string;
@@ -78,3 +79,14 @@ export default function SuccessPage() {
     </div>
   );
 }
+
+
+export default function SuccessPage() {
+  return (
+    <React.Suspense fallback={<div className="flex justify-center p-12">Loading...</div>}>
+      <SuccessPageContent />
+    </React.Suspense>
+  );
+}
+
+

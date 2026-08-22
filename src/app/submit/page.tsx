@@ -1,4 +1,5 @@
 'use client';
+import React from 'react';
 
 import { useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
@@ -8,7 +9,7 @@ import { fetchCategories, fetchUrlMetadata, submitListing } from '@/app/actions'
 
 type Step = 'url' | 'details' | 'bid';
 
-export default function SubmitForm() {
+function SubmitFormContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialUrl = searchParams.get('url') || '';
@@ -249,3 +250,14 @@ export default function SubmitForm() {
     </div>
   );
 }
+
+
+export default function SubmitForm() {
+  return (
+    <React.Suspense fallback={<div className="flex justify-center p-12"><Loader2 className="w-6 h-6 animate-spin" /></div>}>
+      <SubmitFormContent />
+    </React.Suspense>
+  );
+}
+
+
