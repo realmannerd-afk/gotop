@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { Webhooks } from '@dodopayments/nextjs';
 import { createClient } from '@supabase/supabase-js';
+import { revalidatePath } from 'next/cache';
 
 export const POST = async (req: NextRequest) => {
   const handler = Webhooks({
@@ -192,3 +193,5 @@ export const POST = async (req: NextRequest) => {
 
   return handler(req);
 };
+
+
