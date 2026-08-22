@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { CheckCircle2, ShieldCheck, Copy, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { getListingById } from '@/app/actions';
 
 function SuccessPageContent() {
   const params = useParams();
@@ -13,7 +14,24 @@ function SuccessPageContent() {
   const rawToken = searchParams.get('token') || '';
   
   const [copied, setCopied] = useState(false);
+  const [listing, setListing] = useState<any>(null);
   const [manageUrl, setManageUrl] = useState('');
+
+  useEffect(() => {
+    let interval: any;
+    const fetchListing = async () => {
+      const data = await getListingById(listingId);
+      if (data) {
+        setListing(data);
+        if (interval) clearInterval(interval);
+      }
+    };
+    fetchListing();
+    interval = setInterval(fetchListing, 1500);
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [listingId]);
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -29,9 +47,22 @@ function SuccessPageContent() {
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8 sm:p-12 text-center relative overflow-hidden">
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-400 to-teal-500" />
         
-        <div className="w-20 h-20 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6">
-          <CheckCircle2 className="w-10 h-10 text-emerald-500" />
-        </div>
+        {listing ? (
+          <div className="w-24 h-24 mx-auto mb-6 bg-white border border-gray-100 rounded-2xl shadow-sm flex items-center justify-center overflow-hidden p-2 relative">
+            <div className="absolute -top-2 -right-2 w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center shadow-sm z-10 border-2 border-white">
+              <CheckCircle2 className="w-4 h-4 text-white" />
+            </div>
+            {listing.logo_url ? (
+              <img src={listing.logo_url} alt={listing.name} className="w-full h-full object-contain" />
+            ) : (
+              <img src={`https://www.google.com/s2/favicons?domain=${listing.url.replace(/^https?:\/\//, '').split('/')[0]}&sz=128`} alt={listing.name} className="w-16 h-16 object-contain" />
+            )}
+          </div>
+        ) : (
+          <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse">
+            <CheckCircle2 className="w-12 h-12 text-emerald-500" />
+          </div>
+        )}
         
         <h1 className="text-3xl font-bold text-gray-900 mb-3">Payment Complete!</h1>
         <p className="text-gray-500 mb-8">
