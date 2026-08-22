@@ -2,6 +2,7 @@
 'use server';
 
 import { createClient } from '@supabase/supabase-js';
+import DodoPayments from 'dodopayments';
 import { createHash, randomBytes } from 'crypto';
 
 function getAdminClient() {

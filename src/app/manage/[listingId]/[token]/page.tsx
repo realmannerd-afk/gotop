@@ -71,6 +71,9 @@ export default function ManagementPage() {
       } else {
         setIsRebidding(false);
       }
+    } catch (e) {
+      setRebidError("An unexpected error occurred");
+      setIsRebidding(false);
     }
   };
 
