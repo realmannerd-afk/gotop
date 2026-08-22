@@ -80,8 +80,15 @@ export async function submitListing(data: {
       .eq('url', normalizedUrl)
       .maybeSingle();
       
-    if (existing && (existing.status === 'active' || existing.status === 'pending')) {
-      return { error: 'This product is already listed.' };
+    if (existing) {
+      if (existing.status === 'active') {
+        return { error: 'This product is already listed.' };
+      }
+      if (existing.status === 'pending') {
+        // User aborted previous checkout, delete it so they can try again cleanly
+        await supabaseAdmin.from('bids').delete().eq('listing_id', existing.id);
+        await supabaseAdmin.from('listings').delete().eq('id', existing.id);
+      }
     }
 
     // Generate slug
