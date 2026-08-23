@@ -4,75 +4,82 @@ import { notFound } from 'next/navigation';
 
 export default async function SpacePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const spaceId = parseInt(id, 10);
   
-  if (isNaN(spaceId)) {
-    notFound();
-  }
-
-  const space = await getSpace(spaceId);
+  const space = await getSpace(id);
 
   if (!space) {
     return (
-      <main className="min-h-screen w-full bg-[#FAFAFA] flex flex-col items-center justify-center p-6 text-center text-black">
+      <main className="min-h-screen w-full bg-black flex flex-col items-center justify-center p-6 text-center text-white">
         <h1 className="text-2xl md:text-3xl font-bold tracking-tighter mb-8 uppercase">
           This space hasn&apos;t been claimed yet.
         </h1>
         <Link 
           href="/"
-          className="bg-black text-white font-bold py-5 px-12 hover:bg-[#FF3300] transition-colors uppercase tracking-[0.2em] text-[10px]"
+          className="bg-white text-black font-bold py-5 px-12 hover:bg-gray-200 transition-colors uppercase tracking-[0.2em] text-[10px]"
         >
-          CLAIM THIS SPACE
+          CLAIM YOUR SPACE
         </Link>
       </main>
     );
   }
 
-  // Small visualization
-  const TOTAL = 1000000;
-  const SIDE = Math.ceil(Math.sqrt(TOTAL));
-  const idx = space.id - 1;
-  const col = idx % SIDE;
-  const row = Math.floor(idx / SIDE);
-  const leftPct = (col / SIDE) * 100;
-  const topPct = (row / SIDE) * 100;
+  // Small visualization calculation (mapping 1000x1000 down to 100%)
+  const SIDE = 1000;
+  const leftPct = (space.x / SIDE) * 100;
+  const topPct = (space.y / SIDE) * 100;
+  const widthPct = (space.w / SIDE) * 100;
+  const heightPct = (space.h / SIDE) * 100;
+  const pixels = space.w * space.h;
 
   return (
-    <main className="min-h-screen w-full bg-[#FAFAFA] flex flex-col items-center justify-center p-6 text-center selection:bg-black selection:text-white text-black">
-      <div className="mb-12">
+    <main className="min-h-screen w-full bg-black flex flex-col items-center justify-center p-6 text-center selection:bg-white selection:text-black text-white">
+      <div className="mb-12 mt-12">
         <h1 className="text-3xl md:text-5xl font-bold tracking-tighter uppercase">
-          SPACE #{space.id.toLocaleString()}
+          {pixels.toLocaleString()} Pixels
         </h1>
       </div>
 
-      <div className="bg-white border border-black/10 p-12 md:p-16 max-w-2xl w-full mb-12 shadow-sm flex flex-col items-center">
-        <p className="text-[10px] font-bold tracking-[0.2em] text-black/40 mb-6 uppercase">Message</p>
-        <h2 className="text-2xl md:text-3xl font-medium leading-snug mb-10">
-          &quot;{space.message}&quot;
+      <div className="bg-black border border-white/20 p-12 md:p-16 max-w-2xl w-full mb-12 shadow-[0_0_50px_rgba(255,255,255,0.05)] flex flex-col items-center relative overflow-hidden">
+        <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-white mb-6 bg-white flex items-center justify-center">
+          <img src={space.logoUrl} alt={space.name} className="w-12 h-12 object-contain" />
+        </div>
+        
+        <p className="text-[10px] font-bold tracking-[0.2em] text-white/50 mb-2 uppercase">Owned By</p>
+        <h2 className="text-2xl md:text-4xl font-medium leading-snug mb-2">
+          {space.name}
         </h2>
-        <p className="text-[10px] font-bold tracking-[0.2em] text-black/40 mb-2 uppercase">Claimed</p>
-        <p className="text-sm font-mono tracking-widest text-black">
+        <a href={`https://${space.url}`} target="_blank" rel="noopener noreferrer" className="text-sm font-mono text-white/50 hover:text-white underline mb-10">
+          {space.url}
+        </a>
+        
+        <p className="text-[10px] font-bold tracking-[0.2em] text-white/50 mb-2 uppercase">Claimed</p>
+        <p className="text-sm font-mono tracking-widest text-white">
           {space.claimedAt}
         </p>
       </div>
 
       {/* Small visualization */}
       <div className="flex flex-col items-center mb-16">
-        <p className="text-[10px] font-bold tracking-[0.2em] text-black/40 mb-4 uppercase">Location in the Internet</p>
-        <div className="w-48 h-48 border border-black/10 bg-white relative">
+        <p className="text-[10px] font-bold tracking-[0.2em] text-white/50 mb-4 uppercase">Location on Canvas</p>
+        <div className="w-48 h-48 border border-white/20 bg-black relative shadow-[0_0_20px_rgba(255,255,255,0.05)]">
           <div 
-            className="absolute bg-black w-2 h-2 rounded-full transform -translate-x-1/2 -translate-y-1/2"
-            style={{ left: `${leftPct}%`, top: `${topPct}%` }}
+            className="absolute bg-white mix-blend-difference"
+            style={{ 
+              left: `${leftPct}%`, 
+              top: `${topPct}%`,
+              width: `${Math.max(widthPct, 2)}%`, 
+              height: `${Math.max(heightPct, 2)}%`
+            }}
           />
         </div>
       </div>
 
-      <div className="flex flex-col items-center">
+      <div className="flex flex-col items-center mb-12">
         <Link 
           href="/"
-          className="bg-black text-white font-bold py-5 px-12 hover:bg-[#FF3300] transition-colors uppercase tracking-[0.2em] text-[10px]"
+          className="bg-white text-black font-bold py-5 px-12 hover:bg-gray-200 transition-colors uppercase tracking-[0.2em] text-[10px]"
         >
-          CLAIM YOUR OWN SPACE
+          RETURN TO CANVAS
         </Link>
       </div>
     </main>
