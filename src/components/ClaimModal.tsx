@@ -5,12 +5,13 @@ import { useState, useRef, useEffect } from 'react';
 interface ClaimModalProps {
   pixels: number;
   onClose: () => void;
-  onSubmit: (message: string) => void;
+  onSubmit: (name: string, url: string) => void;
   isSubmitting: boolean;
 }
 
 export function ClaimModal({ pixels, onClose, onSubmit, isSubmitting }: ClaimModalProps) {
-  const [message, setMessage] = useState('');
+  const [name, setName] = useState('');
+  const [url, setUrl] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
   
   useEffect(() => {
@@ -19,8 +20,8 @@ export function ClaimModal({ pixels, onClose, onSubmit, isSubmitting }: ClaimMod
   
   const handleClaim = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting || !message) return;
-    onSubmit(message);
+    if (isSubmitting || !name || !url) return;
+    onSubmit(name, url);
   };
 
   return (
@@ -37,26 +38,37 @@ export function ClaimModal({ pixels, onClose, onSubmit, isSubmitting }: ClaimMod
         <h2 className="text-[10px] font-bold tracking-[0.2em] mb-2 text-white/50 text-center uppercase">Claiming</h2>
         <p className="text-3xl font-bold text-center tracking-tighter mb-10 text-white">{pixels.toLocaleString()} Pixels</p>
         
-        <form onSubmit={handleClaim} className="flex flex-col gap-8">
+        <form onSubmit={handleClaim} className="flex flex-col gap-6">
           <div>
             <input
               ref={inputRef}
               type="text"
-              value={message}
-              onChange={(e) => setMessage(e.target.value.slice(0, 80))}
-              placeholder="Leave a message..."
+              value={name}
+              onChange={(e) => setName(e.target.value.slice(0, 40))}
+              placeholder="Company / Name"
               disabled={isSubmitting}
-              className="w-full bg-transparent border-b border-white/20 pb-3 text-center text-white placeholder-white/20 focus:outline-none focus:border-white transition-colors disabled:opacity-50 text-lg md:text-xl font-medium"
-              maxLength={80}
+              className="w-full bg-transparent border-b border-white/20 pb-3 text-center text-white placeholder-white/20 focus:outline-none focus:border-white transition-colors disabled:opacity-50 text-sm font-medium"
+              maxLength={40}
               required
             />
-            <p className="text-[10px] text-white/30 mt-3 text-center font-mono tracking-widest">{message.length}/80</p>
+          </div>
+          <div>
+            <input
+              type="url"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="Website URL"
+              disabled={isSubmitting}
+              className="w-full bg-transparent border-b border-white/20 pb-3 text-center text-white placeholder-white/20 focus:outline-none focus:border-white transition-colors disabled:opacity-50 text-sm font-medium"
+              required
+            />
+            <p className="text-[10px] text-white/30 mt-3 text-center font-mono tracking-widest">Logo automatically fetched</p>
           </div>
 
           <button 
             type="submit"
-            disabled={isSubmitting || !message}
-            className="w-full bg-white text-black font-bold py-5 hover:bg-gray-200 transition-colors uppercase tracking-[0.2em] text-[10px] disabled:opacity-50"
+            disabled={isSubmitting || !name || !url}
+            className="w-full mt-4 bg-white text-black font-bold py-5 hover:bg-gray-200 transition-colors uppercase tracking-[0.2em] text-[10px] disabled:opacity-50"
           >
             {isSubmitting ? 'PROCESSING...' : 'CONFIRM CLAIM'}
           </button>

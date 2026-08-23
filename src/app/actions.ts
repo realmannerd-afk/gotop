@@ -1,62 +1,43 @@
 ﻿"use server";
 
-export interface Space {
-  id: number;
-  message: string;
-  claimedAt: string;
+export interface Claim {
+  id: string;
+  name: string;
+  url: string;
+  logoUrl: string;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
 }
 
-let simulatedClaimCount = 734199;
-let recentClaims: Space[] = [
-  { id: 734199, message: "I was here.", claimedAt: new Date().toISOString() },
-  { id: 734198, message: "hello internet", claimedAt: new Date().toISOString() },
-  { id: 734197, message: "🚀", claimedAt: new Date().toISOString() },
-  { id: 734196, message: "Testing from Vercel", claimedAt: new Date().toISOString() },
-  { id: 734195, message: "Minimalism.", claimedAt: new Date().toISOString() },
+// Initial mock data with some interesting placements
+let claims: Claim[] = [
+  { id: '1', name: 'Stripe', url: 'stripe.com', logoUrl: 'https://www.google.com/s2/favicons?domain=stripe.com&sz=128', x: 480, y: 480, w: 40, h: 40 },
+  { id: '2', name: 'Vercel', url: 'vercel.com', logoUrl: 'https://www.google.com/s2/favicons?domain=vercel.com&sz=128', x: 530, y: 480, w: 20, h: 20 },
+  { id: '3', name: 'GitHub', url: 'github.com', logoUrl: 'https://www.google.com/s2/favicons?domain=github.com&sz=128', x: 450, y: 530, w: 30, h: 30 },
 ];
 
-export async function getStats() {
-  return { claimed: simulatedClaimCount };
+export async function getClaims() {
+  return claims;
 }
 
-export async function getAllClaims() {
-  return recentClaims.map(d => ({
-    ...d,
-    claimedAt: new Date(d.claimedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
-  }));
-}
-
-export async function getSpace(id: number) {
-  const space = recentClaims.find(s => s.id === id);
-  if (!space) {
-    return {
-      id,
-      message: "This is a historical space.",
-      claimedAt: "1 Jan 2026"
-    };
-  }
-  return {
-    ...space,
-    claimedAt: new Date(space.claimedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
-  };
-}
-
-export async function claimSpace(message: string) {
-  if (!message || message.length > 80) return { error: 'Message must be 1-80 chars.' };
+export async function claimArea(name: string, url: string, x: number, y: number, w: number, h: number) {
+  if (!name || !url) return { error: 'Company Name and URL are required.' };
   
-  simulatedClaimCount++;
-  const nextId = simulatedClaimCount;
-  
-  if (nextId > 1000000) return { error: 'All spaces claimed.' };
+  // Clean URL for favicon extraction
+  const cleanUrl = url.replace(/^(?:https?:\/\/)?(?:www\.)?/i, "").split('/')[0];
+  const logoUrl = `https://www.google.com/s2/favicons?domain=${cleanUrl}&sz=128`;
 
-  const newClaim = {
-    id: nextId,
-    message,
-    claimedAt: new Date().toISOString()
+  const newClaim: Claim = {
+    id: Math.random().toString(36).substring(7),
+    name,
+    url: cleanUrl,
+    logoUrl,
+    x, y, w, h
   };
 
-  recentClaims.unshift(newClaim);
-  if (recentClaims.length > 10) recentClaims.pop();
+  claims.push(newClaim);
 
-  return { success: true, id: nextId };
+  return { success: true, claim: newClaim };
 }
