@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface GridVisualProps {
   total: number;
@@ -9,17 +9,14 @@ interface GridVisualProps {
 
 export function GridVisual({ total, claimed }: GridVisualProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [lastClaimed, setLastClaimed] = useState(claimed);
+  const lastClaimedRef = useRef<number>(claimed);
   const animationRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
 
-  // When claimed changes, update lastClaimed to trigger animation
-  useEffect(() => {
-    if (claimed > lastClaimed) {
-      setLastClaimed(claimed);
-      startTimeRef.current = performance.now();
-    }
-  }, [claimed, lastClaimed]);
+  if (claimed > lastClaimedRef.current) {
+    lastClaimedRef.current = claimed;
+    startTimeRef.current = performance.now();
+  }
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -106,3 +103,4 @@ export function GridVisual({ total, claimed }: GridVisualProps) {
     </div>
   );
 }
+
