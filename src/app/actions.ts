@@ -12,11 +12,13 @@ export interface Claim {
   h: number;
 }
 
-// Initial mock data
 let claims: Claim[] = [
-  { id: '1', name: 'Stripe', url: 'stripe.com', logoUrl: 'https://www.google.com/s2/favicons?domain=stripe.com&sz=128', description: 'Financial infrastructure for the internet.', x: 480, y: 480, w: 40, h: 40 },
-  { id: '2', name: 'Vercel', url: 'vercel.com', logoUrl: 'https://www.google.com/s2/favicons?domain=vercel.com&sz=128', description: 'Develop. Preview. Ship.', x: 530, y: 480, w: 20, h: 20 },
-  { id: '3', name: 'GitHub', url: 'github.com', logoUrl: 'https://www.google.com/s2/favicons?domain=github.com&sz=128', description: 'Where the world builds software.', x: 450, y: 530, w: 30, h: 30 },
+  { id: '1', name: 'Stripe', url: 'stripe.com', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/b/ba/Stripe_Logo%2C_revised_2016.svg', description: 'Financial infrastructure for the internet.', x: 200, y: 200, w: 80, h: 40 },
+  { id: '2', name: 'Vercel', url: 'vercel.com', logoUrl: 'https://assets.vercel.com/image/upload/v1588805858/repositories/vercel/logo.png', description: 'Develop. Preview. Ship.', x: 300, y: 200, w: 50, h: 50 },
+  { id: '3', name: 'GitHub', url: 'github.com', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg', description: 'Where the world builds software.', x: 400, y: 400, w: 60, h: 60 },
+  { id: '4', name: 'Apple', url: 'apple.com', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg', description: 'Think different.', x: 500, y: 300, w: 50, h: 60 },
+  { id: '5', name: 'Nike', url: 'nike.com', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/a/a6/Logo_NIKE.svg', description: 'Just do it.', x: 600, y: 500, w: 80, h: 40 },
+  { id: '6', name: 'React', url: 'react.dev', logoUrl: 'https://upload.wikimedia.org/wikipedia/commons/a/a7/React-icon.svg', description: 'The library for web and native user interfaces.', x: 700, y: 250, w: 60, h: 60 },
 ];
 
 export async function getClaims() {

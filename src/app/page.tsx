@@ -19,6 +19,8 @@ export default function Home() {
   const [formUrl, setFormUrl] = useState('');
   const [formDesc, setFormDesc] = useState('');
 
+  const [buyHint, setBuyHint] = useState(false);
+
   useEffect(() => {
     async function load() {
       try {
@@ -31,6 +33,7 @@ export default function Home() {
   }, []);
 
   const handleBlockClick = (x: number, y: number, w: number, h: number) => {
+    setBuyHint(false);
     setSelectedClaim(null);
     setSelectedEmpty({ x, y, w, h });
     setBuyStep(1);
@@ -40,8 +43,18 @@ export default function Home() {
   };
 
   const handleClaimClick = (claim: Claim) => {
+    setBuyHint(false);
     setSelectedEmpty(null);
     setSelectedClaim(claim);
+  };
+
+  const handleHeaderBuyClick = () => {
+    // If they click BUY SPACE in header, we try to open a default block if nothing is selected,
+    // or we just show a helpful hint to click the canvas.
+    if (!selectedEmpty && !selectedClaim) {
+      setBuyHint(true);
+      setTimeout(() => setBuyHint(false), 4000);
+    }
   };
 
   const handleClaimSubmit = async (e: React.FormEvent) => {
@@ -60,7 +73,7 @@ export default function Home() {
       if (res.success && res.claim) {
         setClaims(prev => [...prev, res.claim!]);
         setSelectedEmpty(null);
-        setSelectedClaim(res.claim); // Show info panel for the new claim
+        setSelectedClaim(res.claim);
       }
     } catch (err) {
       setClaiming(false);
@@ -84,6 +97,7 @@ export default function Home() {
             {(TOTAL_SPACES - claimedCount).toLocaleString()} SPACES LEFT
           </p>
           <button 
+            onClick={handleHeaderBuyClick}
             className="text-[10px] font-bold uppercase tracking-widest hover:text-[#737373] transition-colors"
           >
             BUY SPACE
@@ -98,6 +112,13 @@ export default function Home() {
           onBlockClick={handleBlockClick}
           onClaimClick={handleClaimClick}
         />
+
+        {/* HINT OVERLAY (triggered by header button) */}
+        {buyHint && (
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-[#111111] text-white px-6 py-3 text-xs font-bold uppercase tracking-widest shadow-lg animate-in fade-in slide-in-from-top-4 duration-300 z-40">
+            Click anywhere on the grid below to select a space.
+          </div>
+        )}
         
         {/* PURCHASE PANEL */}
         {selectedEmpty && (
