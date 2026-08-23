@@ -24,7 +24,7 @@ export async function getAllClaims() {
     .from('spaces')
     .select('id, message, claimed_at')
     .order('id', { ascending: true })
-    .limit(10000); // We just need IDs for the grid
+    .limit(10000);
     
   if (error) return [];
   
@@ -33,6 +33,22 @@ export async function getAllClaims() {
     message: d.message,
     claimedAt: new Date(d.claimed_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
   }));
+}
+
+export async function getSpace(id: number) {
+  const { data, error } = await supabaseServer
+    .from('spaces')
+    .select('id, message, claimed_at')
+    .eq('id', id)
+    .single();
+    
+  if (error || !data) return null;
+  
+  return {
+    id: data.id,
+    message: data.message,
+    claimedAt: new Date(data.claimed_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+  };
 }
 
 export async function claimSpace(message: string) {
