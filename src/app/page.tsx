@@ -143,7 +143,7 @@ export default function Home() {
           </button>
           
           <p className="mt-4 text-[10px] text-gray-500 tracking-widest uppercase font-bold bg-white/90 px-4 py-1 border border-[#E5E5E5]">
-            Drag to pan • Scroll to zoom
+            Drag to pan ï¿½ Scroll to zoom
           </p>
         </div>
 
