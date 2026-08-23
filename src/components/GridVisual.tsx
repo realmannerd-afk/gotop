@@ -1,26 +1,42 @@
 ﻿'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Claim } from '@/app/actions';
 
 interface GridVisualProps {
   claims: Claim[];
-  onSelectionChange: (rect: { x: number, y: number, w: number, h: number } | null) => void;
+  onBlockClick: (x: number, y: number, w: number, h: number) => void;
+  onClaimClick: (claim: Claim) => void;
 }
 
-export function GridVisual({ claims, onSelectionChange }: GridVisualProps) {
+export function GridVisual({ claims, onBlockClick, onClaimClick }: GridVisualProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
+  const [scale, setScale] = useState(1);
+  const [translate, setTranslate] = useState({ x: 0, y: 0 });
+  
   const [isDragging, setIsDragging] = useState(false);
-  const [startPos, setStartPos] = useState({ x: 0, y: 0 });
-  const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
+  const [startPan, setStartPan] = useState({ x: 0, y: 0 });
+  const [lastPan, setLastPan] = useState({ x: 0, y: 0 });
+  const [didPan, setDidPan] = useState(false);
 
-  const [renderTick, setRenderTick] = useState(0);
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0, rawX: 0, rawY: 0 });
+  const [hoveredClaim, setHoveredClaim] = useState<Claim | null>(null);
+  const [hoveredEmpty, setHoveredEmpty] = useState<{x: number, y: number} | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
   const imageCache = useRef<Record<string, HTMLImageElement>>({});
+  const [renderTick, setRenderTick] = useState(0);
 
   const SIDE = 1000;
+  const BLOCK_SIZE = 10; // 10x10 pixels = 100 spaces
 
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Main Render Loop
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -30,15 +46,15 @@ export function GridVisual({ claims, onSelectionChange }: GridVisualProps) {
     canvas.width = SIDE;
     canvas.height = SIDE;
 
-    // Fill background (black canvas)
-    ctx.fillStyle = '#000000';
+    // Background
+    ctx.fillStyle = '#FAFAF9';
     ctx.fillRect(0, 0, SIDE, SIDE);
 
-    // Draw subtle grid (every 10px = 1 block)
-    ctx.strokeStyle = '#111111';
+    // Subtle Grid lines
+    ctx.strokeStyle = '#E5E5E5';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    for (let i = 0; i <= SIDE; i += 10) {
+    for (let i = 0; i <= SIDE; i += BLOCK_SIZE) {
       ctx.moveTo(i, 0);
       ctx.lineTo(i, SIDE);
       ctx.moveTo(0, i);
@@ -46,9 +62,8 @@ export function GridVisual({ claims, onSelectionChange }: GridVisualProps) {
     }
     ctx.stroke();
 
-    // Draw claims
+    // Draw Claims
     claims.forEach(claim => {
-      // White background for the claimed pixels
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(claim.x, claim.y, claim.w, claim.h);
 
@@ -62,91 +77,174 @@ export function GridVisual({ claims, onSelectionChange }: GridVisualProps) {
         ctx.drawImage(imageCache.current[claim.logoUrl], claim.x, claim.y, claim.w, claim.h);
       }
     });
+
   }, [claims, renderTick]);
 
+  // Pointer Events
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!containerRef.current) return;
-    
-    // In a fixed 1000x1000 element, native event offsetX/Y is perfect
-    const cx = Math.round(e.nativeEvent.offsetX);
-    const cy = Math.round(e.nativeEvent.offsetY);
-
-    // Snap to 10x10 grid (optional, but standard for 1millionpixels)
-    const snapX = Math.floor(cx / 10) * 10;
-    const snapY = Math.floor(cy / 10) * 10;
-
     setIsDragging(true);
-    setStartPos({ x: snapX, y: snapY });
-    setCurrentPos({ x: snapX, y: snapY });
-    onSelectionChange(null);
+    setDidPan(false);
+    setStartPan({ x: e.clientX, y: e.clientY });
+    setLastPan({ x: e.clientX, y: e.clientY });
     containerRef.current.setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging) return;
+    if (!containerRef.current) return;
+
+    if (isDragging) {
+      const dx = e.clientX - lastPan.x;
+      const dy = e.clientY - lastPan.y;
+      setTranslate(prev => ({ x: prev.x + dx, y: prev.y + dy }));
+      setLastPan({ x: e.clientX, y: e.clientY });
+      
+      if (Math.abs(e.clientX - startPan.x) > 3 || Math.abs(e.clientY - startPan.y) > 3) {
+        setDidPan(true);
+      }
+    }
+
+    // Calculate hover regardless of drag
+    const rect = canvasRef.current!.getBoundingClientRect();
+    let cx = (e.clientX - rect.left) / scale;
+    let cy = (e.clientY - rect.top) / scale;
     
-    const cx = Math.max(0, Math.min(Math.round(e.nativeEvent.offsetX), SIDE));
-    const cy = Math.max(0, Math.min(Math.round(e.nativeEvent.offsetY), SIDE));
+    setMousePos({ x: cx, y: cy, rawX: e.clientX, rawY: e.clientY });
 
-    // Snap to 10x10 grid
-    const snapX = Math.ceil(cx / 10) * 10;
-    const snapY = Math.ceil(cy / 10) * 10;
-
-    setCurrentPos({ x: snapX, y: snapY });
-
-    const x = Math.min(startPos.x, snapX);
-    const y = Math.min(startPos.y, snapY);
-    const w = Math.abs(snapX - startPos.x);
-    const h = Math.abs(snapY - startPos.y);
-
-    if (w > 0 && h > 0) {
-      onSelectionChange({ x, y, w, h });
+    if (cx >= 0 && cx <= SIDE && cy >= 0 && cy <= SIDE) {
+      // Find intersecting claim
+      const claim = claims.find(c => cx >= c.x && cx < c.x + c.w && cy >= c.y && cy < c.y + c.h);
+      if (claim) {
+        setHoveredClaim(claim);
+        setHoveredEmpty(null);
+      } else {
+        setHoveredClaim(null);
+        setHoveredEmpty({
+          x: Math.floor(cx / BLOCK_SIZE) * BLOCK_SIZE,
+          y: Math.floor(cy / BLOCK_SIZE) * BLOCK_SIZE
+        });
+      }
     } else {
-      onSelectionChange(null);
+      setHoveredClaim(null);
+      setHoveredEmpty(null);
     }
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
     setIsDragging(false);
     containerRef.current?.releasePointerCapture(e.pointerId);
+
+    if (!didPan) {
+      if (hoveredClaim) {
+        onClaimClick(hoveredClaim);
+      } else if (hoveredEmpty) {
+        // Default size 10x10 for new claims
+        onBlockClick(hoveredEmpty.x, hoveredEmpty.y, BLOCK_SIZE, BLOCK_SIZE);
+      }
+    }
   };
 
-  const selX = Math.min(startPos.x, currentPos.x);
-  const selY = Math.min(startPos.y, currentPos.y);
-  const selW = Math.abs(currentPos.x - startPos.x);
-  const selH = Math.abs(currentPos.y - startPos.y);
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    if (!containerRef.current) return;
+    
+    const zoomSensitivity = 0.002;
+    const delta = -e.deltaY * zoomSensitivity;
+    
+    const containerRect = containerRef.current.getBoundingClientRect();
+    const mouseX = e.clientX - containerRect.left;
+    const mouseY = e.clientY - containerRect.top;
+    
+    const cx = containerRect.width / 2;
+    const cy = containerRect.height / 2;
+    
+    const newScale = Math.max(0.5, Math.min(scale * (1 + delta), 10));
+    const scaleRatio = newScale / scale;
+    
+    const newTx = mouseX - (mouseX - translate.x - cx) * scaleRatio - cx;
+    const newTy = mouseY - (mouseY - translate.y - cy) * scaleRatio - cy;
+    
+    setScale(newScale);
+    setTranslate({ x: newTx, y: newTy });
+  };
 
   return (
-    <div className="w-full h-full overflow-auto bg-[#1a1a1a] flex items-start justify-center p-8 custom-scrollbar">
-      {/* FIXED 1000x1000 Container */}
+    <div 
+      ref={containerRef}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onWheel={handleWheel}
+      className="relative w-full h-full overflow-hidden touch-none bg-[#FAFAF9]"
+    >
       <div 
-        ref={containerRef}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-        onPointerCancel={handlePointerUp}
-        className="relative shadow-[0_0_100px_rgba(255,255,255,0.1)] border border-white/20 touch-none flex-shrink-0 cursor-crosshair"
-        style={{ width: SIDE, height: SIDE }}
+        className="absolute top-1/2 left-1/2 origin-top-left"
+        style={{
+          transform: `translate(calc(-50% + ${translate.x}px), calc(-50% + ${translate.y}px)) scale(${scale})`,
+          width: SIDE,
+          height: SIDE,
+        }}
       >
         <canvas 
           ref={canvasRef}
-          className="absolute inset-0 w-full h-full pointer-events-none"
+          className="w-full h-full shadow-sm"
           style={{ imageRendering: 'pixelated' }}
         />
         
-        {/* Selection Overlay */}
-        {isDragging && selW > 0 && selH > 0 && (
+        {/* Hover Claim Outline */}
+        {hoveredClaim && (
           <div 
-            className="absolute border-2 border-white bg-white/30 mix-blend-difference pointer-events-none"
+            className="absolute border border-[#111111] pointer-events-none transition-all duration-75"
             style={{
-              left: selX,
-              top: selY,
-              width: selW,
-              height: selH
+              left: hoveredClaim.x - 1,
+              top: hoveredClaim.y - 1,
+              width: hoveredClaim.w + 2,
+              height: hoveredClaim.h + 2,
+            }}
+          />
+        )}
+
+        {/* Hover Empty Outline */}
+        {hoveredEmpty && !hoveredClaim && (
+          <div 
+            className="absolute bg-[#111111]/10 border border-[#111111]/30 pointer-events-none transition-all duration-75"
+            style={{
+              left: hoveredEmpty.x,
+              top: hoveredEmpty.y,
+              width: BLOCK_SIZE,
+              height: BLOCK_SIZE,
             }}
           />
         )}
       </div>
+
+      {/* Floating Tooltips */}
+      {isClient && hoveredClaim && !isDragging && (
+        <div 
+          className="fixed pointer-events-none z-50 bg-white border border-[#E5E5E5] text-[#111111] px-3 py-2 text-[10px] uppercase font-bold tracking-widest shadow-sm"
+          style={{ left: mousePos.rawX + 15, top: mousePos.rawY + 15 }}
+        >
+          {hoveredClaim.name}
+        </div>
+      )}
+
+      {isClient && hoveredEmpty && !isDragging && (
+        <div 
+          className="fixed pointer-events-none z-50 bg-white border border-[#E5E5E5] text-[#111111] px-3 py-2 text-[10px] uppercase font-bold tracking-widest shadow-sm flex flex-col gap-1"
+          style={{ left: mousePos.rawX + 15, top: mousePos.rawY + 15 }}
+        >
+          <span>Available</span><span className="text-[#737373]">$10</span><span className="mt-1 border-t border-[#E5E5E5] pt-1 text-center">Buy</span>
+        </div>
+      )}
+
+      {/* Canvas Controls */}
+      <div className="absolute bottom-6 left-6 z-20 flex bg-white border border-[#E5E5E5] shadow-sm overflow-hidden text-[#111111] font-mono text-sm">
+        <button onClick={() => setScale(s => Math.min(s * 1.2, 10))} className="px-3 py-2 hover:bg-[#FAFAF9] border-r border-[#E5E5E5] transition-colors">+</button>
+        <button onClick={() => setScale(s => Math.max(s / 1.2, 0.5))} className="px-3 py-2 hover:bg-[#FAFAF9] border-r border-[#E5E5E5] transition-colors">-</button>
+        <button onClick={() => { setScale(1); setTranslate({x: 0, y: 0}); }} className="px-3 py-2 hover:bg-[#FAFAF9] text-[10px] uppercase tracking-widest font-bold transition-colors">Reset</button>
+      </div>
     </div>
   );
 }
+
