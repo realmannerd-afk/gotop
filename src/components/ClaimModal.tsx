@@ -3,24 +3,24 @@
 import { useState } from 'react';
 
 interface ClaimModalProps {
+  spaceId: number;
   onClose: () => void;
-  onSubmit: (name: string, url: string) => void;
+  onSubmit: (message: string) => void;
   isSubmitting: boolean;
 }
 
-export function ClaimModal({ onClose, onSubmit, isSubmitting }: ClaimModalProps) {
-  const [name, setName] = useState('');
-  const [url, setUrl] = useState('');
+export function ClaimModal({ spaceId, onClose, onSubmit, isSubmitting }: ClaimModalProps) {
+  const [message, setMessage] = useState('');
   
   const handleClaim = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
-    onSubmit(name, url);
+    if (isSubmitting || !message) return;
+    onSubmit(message);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/80 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-white border border-black/10 w-full max-w-sm p-8 md:p-12 shadow-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#F2F1EC]/90 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="bg-[#F2F1EC] border border-black/20 w-full max-w-sm p-8 md:p-12 shadow-2xl relative">
         <button 
           onClick={onClose}
           disabled={isSubmitting}
@@ -30,43 +30,31 @@ export function ClaimModal({ onClose, onSubmit, isSubmitting }: ClaimModalProps)
           ✕
         </button>
         
-        <h2 className="text-xs font-bold tracking-[0.2em] mb-10 text-black text-center uppercase">Claim Your Space</h2>
+        <h2 className="text-[10px] font-bold tracking-[0.2em] mb-2 text-black/50 text-center uppercase">Your Space</h2>
+        <p className="text-2xl font-bold text-center tracking-tighter mb-8">#{spaceId.toLocaleString()}</p>
         
-        <form onSubmit={handleClaim} className="flex flex-col gap-6">
+        <form onSubmit={handleClaim} className="flex flex-col gap-8">
           <div>
-            <label className="block text-[10px] font-bold tracking-widest text-black/40 mb-2 uppercase">Company Name</label>
             <input
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value.slice(0, 80))}
-              placeholder="Acme Inc."
+              value={message}
+              onChange={(e) => setMessage(e.target.value.slice(0, 80))}
+              placeholder="Write something..."
               disabled={isSubmitting}
-              className="w-full bg-[#FAFAFA] border border-black/10 p-4 text-black placeholder-black/30 focus:outline-none focus:border-black transition-colors disabled:opacity-50 text-sm font-medium"
+              className="w-full bg-transparent border-b border-black/20 pb-3 text-center text-black placeholder-black/30 focus:outline-none focus:border-black transition-colors disabled:opacity-50 text-lg md:text-xl font-medium"
               maxLength={80}
+              autoFocus
               required
             />
-          </div>
-
-          <div>
-            <label className="block text-[10px] font-bold tracking-widest text-black/40 mb-2 uppercase">Website URL</label>
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://acme.com"
-              disabled={isSubmitting}
-              className="w-full bg-[#FAFAFA] border border-black/10 p-4 text-black placeholder-black/30 focus:outline-none focus:border-black transition-colors disabled:opacity-50 text-sm font-medium"
-              required
-            />
-            <p className="text-[10px] text-black/40 mt-3 tracking-widest uppercase text-center">Logo is fetched automatically</p>
+            <p className="text-[10px] text-black/30 mt-3 text-right font-mono">{message.length}/80</p>
           </div>
 
           <button 
             type="submit"
-            disabled={isSubmitting || !name || !url}
-            className="w-full bg-black text-white font-bold py-5 mt-4 hover:bg-[#FF3300] transition-colors uppercase tracking-[0.2em] text-[10px] disabled:opacity-50"
+            disabled={isSubmitting || !message}
+            className="w-full bg-black text-white font-bold py-5 hover:bg-[#FF3300] transition-colors uppercase tracking-[0.2em] text-[10px] disabled:opacity-50"
           >
-            {isSubmitting ? 'Processing...' : 'Confirm'}
+            {isSubmitting ? 'PROCESSING...' : 'CLAIM'}
           </button>
         </form>
       </div>

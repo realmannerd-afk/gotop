@@ -6,9 +6,7 @@ import { cookies } from 'next/headers';
 
 export interface Space {
   id: number;
-  name: string;
-  url: string;
-  logoUrl: string | null;
+  message: string;
   claimedAt: string;
 }
 
@@ -22,45 +20,23 @@ export async function getStats() {
 }
 
 export async function getAllClaims() {
-  // Fetch up to 10k for visual representation
   const { data, error } = await supabaseServer
     .from('spaces')
-    .select('id, name, url, logo_url, claimed_at')
+    .select('id, message, claimed_at')
     .order('id', { ascending: true })
-    .limit(10000);
+    .limit(10000); // We just need IDs for the grid
     
   if (error) return [];
   
   return data.map(d => ({
     id: d.id,
-    name: d.name,
-    url: d.url,
-    logoUrl: d.logo_url,
-    claimedAt: new Date(d.claimed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    message: d.message,
+    claimedAt: new Date(d.claimed_at).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
   }));
 }
 
-export async function getSpace(id: number) {
-  const { data, error } = await supabaseServer
-    .from('spaces')
-    .select('id, name, url, logo_url, claimed_at')
-    .eq('id', id)
-    .single();
-    
-  if (error || !data) return null;
-  
-  return {
-    id: data.id,
-    name: data.name,
-    url: data.url,
-    logoUrl: data.logo_url,
-    claimedAt: new Date(data.claimed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
-  };
-}
-
-export async function claimSpace(name: string, url: string) {
-  if (!name || name.length > 80) return { error: 'Name must be 1-80 chars.' };
-  if (!url || url.length > 255) return { error: 'Invalid URL.' };
+export async function claimSpace(message: string) {
+  if (!message || message.length > 80) return { error: 'Message must be 1-80 chars.' };
 
   const cookieStore = await cookies();
   let sessId = cookieStore.get('anon_session')?.value;
@@ -69,16 +45,6 @@ export async function claimSpace(name: string, url: string) {
     cookieStore.set('anon_session', sessId, { maxAge: 60*60*24*365, httpOnly: true });
   }
 
-  let domain = '';
-  try {
-    const formatted = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
-    domain = new URL(formatted).hostname;
-  } catch (e) {
-    return { error: 'Invalid URL format.' };
-  }
-
-  const logo_url = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
-
   let attempts = 0;
   let claimedId = null;
   
@@ -86,7 +52,7 @@ export async function claimSpace(name: string, url: string) {
     const { count, error: countError } = await supabaseServer.from('spaces').select('*', { count: 'exact', head: true });
     
     if (countError && countError.code === '42P01') {
-      return { error: 'Database not setup. Please run the SQL migration in Supabase.' };
+      return { error: 'Database not setup. Please run the SQL migration.' };
     }
 
     const nextId = (count || 0) + 1;
@@ -94,9 +60,7 @@ export async function claimSpace(name: string, url: string) {
 
     const { error: insertError } = await supabaseServer.from('spaces').insert({
       id: nextId,
-      name,
-      url,
-      logo_url,
+      message,
       anonymous_session_id: sessId
     });
 
@@ -114,5 +78,5 @@ export async function claimSpace(name: string, url: string) {
 
   if (!claimedId) return { error: 'High traffic. Please try again.' };
 
-  return { success: true, id: claimedId, logoUrl: logo_url };
+  return { success: true, id: claimedId };
 }
