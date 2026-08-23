@@ -14,7 +14,6 @@ export default function Home() {
   const [successState, setSuccessState] = useState<{id: number, message: string} | null>(null);
   const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
-  const [latestClaimStr, setLatestClaimStr] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -22,32 +21,13 @@ export default function Home() {
       const allSpaces = await getAllClaims();
       setClaimed(stats.claimed);
       setClaimedIds(allSpaces.map(s => s.id));
-      if (allSpaces.length > 0) {
-        setLatestClaimStr(`Someone just claimed one.`);
-      }
       setLoading(false);
     }
     load();
   }, []);
 
-  // Live feeling: poll every 10s
-  useEffect(() => {
-    if (loading) return;
-    const timer = setInterval(async () => {
-      const stats = await getStats();
-      const allSpaces = await getAllClaims();
-      if (stats.claimed > claimed) {
-        setLatestClaimStr(`Someone just claimed one.`);
-        setTimeout(() => setLatestClaimStr(null), 5000);
-      }
-      setClaimed(stats.claimed);
-      setClaimedIds(allSpaces.map(s => s.id));
-    }, 10000);
-    return () => clearInterval(timer);
-  }, [loading, claimed]);
-
   const remaining = TOTAL_SPACES - claimed;
-  const nextId = claimed + 1; // Simplistic guess for modal display
+  const nextId = claimed + 1; 
 
   const handleClaimSubmit = async (message: string) => {
     setClaiming(true);
@@ -68,100 +48,92 @@ export default function Home() {
   };
 
   if (loading) {
-    return <div className="min-h-screen w-full bg-[#F2F1EC]" />;
+    return <div className="h-[100dvh] w-full bg-[#F5F4F0]" />;
   }
 
   if (successState) {
     return (
-      <main className="min-h-screen w-full bg-[#F2F1EC] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-700 selection:bg-black selection:text-[#F2F1EC]">
-        <div className="max-w-lg w-full flex flex-col items-center">
-          <h1 className="text-3xl md:text-5xl font-bold tracking-tighter text-black mb-12">
-            YOU GOT ONE.
+      <main className="h-[100dvh] w-full bg-[#F5F4F0] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500 selection:bg-black selection:text-[#F5F4F0]">
+        <div className="max-w-md w-full flex flex-col items-center">
+          <h1 className="text-2xl md:text-4xl font-bold tracking-tighter text-black mb-10 uppercase">
+            You Got One.
           </h1>
           
-          <div className="bg-[#F2F1EC] border border-black/20 p-12 md:p-16 w-full mb-12 shadow-2xl relative overflow-hidden">
-            <p className="font-mono text-black/40 mb-10 text-xs uppercase tracking-widest">Space #{successState.id.toLocaleString()}</p>
-            <p className="text-2xl md:text-3xl font-medium text-black leading-snug">
+          <div className="bg-[#F5F4F0] border border-black p-10 md:p-14 w-full mb-10 relative overflow-hidden">
+            <p className="font-mono text-black/40 mb-8 text-[10px] uppercase tracking-widest">Space #{successState.id.toLocaleString()}</p>
+            <p className="text-xl md:text-2xl font-medium text-black leading-snug">
               &quot;{successState.message}&quot;
             </p>
           </div>
           
-          <div className="w-full flex flex-col gap-4">
+          <div className="w-full flex gap-4">
             <button 
               onClick={() => {
                 navigator.clipboard.writeText(`${window.location.origin}/space/${successState.id}`);
                 alert("Link copied!");
               }}
-              className="w-full border border-black/20 bg-transparent text-black font-bold py-5 hover:bg-black hover:text-[#F2F1EC] transition-colors text-xs uppercase tracking-[0.2em]"
+              className="flex-1 border border-black bg-transparent text-black font-bold py-4 hover:bg-black hover:text-[#F5F4F0] transition-colors text-[10px] uppercase tracking-widest"
             >
               Copy Link
             </button>
             <button 
               onClick={() => window.open(`https://x.com/intent/tweet?text=I%20HAVE%20A%20PIECE%20OF%20THE%20INTERNET.%0A%0ASPACE%20%23${successState.id}%0A%0ATHE%20INTERNET%20IS%20RUNNING%20OUT.`, '_blank')}
-              className="w-full border border-black/20 bg-transparent text-black font-bold py-5 hover:bg-[#1DA1F2] hover:border-transparent hover:text-white transition-colors text-xs uppercase tracking-[0.2em]"
+              className="flex-1 border border-black bg-transparent text-black font-bold py-4 hover:bg-[#1DA1F2] hover:border-transparent hover:text-white transition-colors text-[10px] uppercase tracking-widest"
             >
               Share
             </button>
-            <button 
-              onClick={() => setSuccessState(null)}
-              className="w-full bg-black text-[#F2F1EC] font-bold py-5 hover:bg-[#FF3300] transition-colors text-xs uppercase tracking-[0.2em]"
-            >
-              Done
-            </button>
           </div>
+          
+          <button 
+            onClick={() => setSuccessState(null)}
+            className="mt-8 text-[10px] font-bold tracking-widest uppercase text-black/40 hover:text-black transition-colors"
+          >
+            Return to Grid
+          </button>
         </div>
       </main>
     );
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#F2F1EC] flex flex-col selection:bg-black selection:text-[#F2F1EC] text-black">
-      <main className="flex-1 flex flex-col items-center p-6 md:p-12 w-full max-w-5xl mx-auto">
-        
-        {/* HEADER */}
-        <div className="w-full text-center mt-4">
-          <h2 className="text-[10px] md:text-xs font-bold tracking-[0.3em] uppercase">
-            The Internet Is Running Out.
-          </h2>
-        </div>
+    <div className="h-[100dvh] w-full bg-[#F5F4F0] flex flex-col selection:bg-black selection:text-[#F5F4F0] text-black overflow-hidden">
+      
+      {/* HEADER */}
+      <div className="shrink-0 w-full text-center pt-8 md:pt-12 px-6">
+        <h2 className="text-[10px] md:text-xs font-bold tracking-[0.4em] uppercase text-black">
+          The Internet Is Running Out.
+        </h2>
+      </div>
 
-        {/* COUNTER */}
-        <div className="flex flex-col items-center justify-center w-full mt-10 md:mt-16 mb-8 md:mb-12">
-          <h1 className="text-[20vw] md:text-[140px] leading-[0.85] font-bold tracking-tighter tabular-nums text-black">
-            {remaining.toLocaleString()}
-          </h1>
-          <p className="text-[10px] md:text-xs tracking-[0.3em] font-bold uppercase mt-6 md:mt-8">
-            Spaces Left.
-          </p>
-        </div>
+      {/* COUNTER */}
+      <div className="shrink-0 flex flex-col items-center justify-center w-full mt-4 md:mt-8 px-6">
+        <h1 className="text-[20vw] md:text-[140px] leading-[0.85] font-bold tracking-tighter tabular-nums text-black">
+          {remaining.toLocaleString()}
+        </h1>
+        <p className="text-[10px] md:text-xs tracking-[0.3em] font-bold uppercase mt-4 md:mt-6 text-black/60">
+          Spaces Left.
+        </p>
+      </div>
 
-        {/* GRID */}
-        <div className="w-full relative flex flex-col items-center">
-          <GridVisual total={TOTAL_SPACES} claimedIds={claimedIds} />
-          
-          <div className="h-6 mt-4 flex items-center justify-center">
-            {latestClaimStr && (
-              <p className="text-[10px] font-mono uppercase tracking-widest text-black/50 animate-in fade-in zoom-in duration-500">
-                {latestClaimStr}
-              </p>
-            )}
-          </div>
-        </div>
+      {/* GRID */}
+      <div className="flex-1 w-full relative border-y border-black/10 mt-6 md:mt-10 min-h-0 bg-[#FAFAF8]">
+        <GridVisual total={TOTAL_SPACES} claimedIds={claimedIds} />
+      </div>
 
-        {/* CTA */}
-        <div className="w-full flex flex-col items-center mt-8 md:mt-12 mb-8">
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="bg-black text-[#F2F1EC] px-12 py-6 text-[10px] md:text-xs font-bold uppercase tracking-[0.25em] hover:bg-[#FF3300] transition-colors"
-          >
-            Claim A Space.
-          </button>
-          <p className="mt-6 text-[10px] tracking-[0.2em] font-bold uppercase text-black/40">
-            Once it&apos;s gone, it&apos;s gone.
-          </p>
-        </div>
-      </main>
+      {/* CTA FOOTER */}
+      <div className="shrink-0 w-full flex flex-col items-center py-6 md:py-8 px-6 bg-[#F5F4F0]">
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="bg-black text-[#F5F4F0] px-10 py-5 text-[10px] md:text-xs font-bold uppercase tracking-[0.25em] hover:bg-[#FF3300] transition-colors"
+        >
+          Claim Your Space
+        </button>
+        <p className="mt-4 text-[9px] md:text-[10px] tracking-[0.2em] font-bold uppercase text-black/40">
+          Once it&apos;s gone, it&apos;s gone.
+        </p>
+      </div>
 
+      {/* MODAL */}
       {isModalOpen && (
         <ClaimModal 
           spaceId={nextId}
