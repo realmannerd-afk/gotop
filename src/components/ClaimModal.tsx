@@ -3,20 +3,23 @@
 import { useState } from 'react';
 
 interface ClaimModalProps {
+  spaceId: number | null;
   onClose: () => void;
-  onSubmit: (name: string, url: string) => void;
+  onSubmit: (id: number, name: string, url: string) => void;
   isSubmitting: boolean;
 }
 
-export function ClaimModal({ onClose, onSubmit, isSubmitting }: ClaimModalProps) {
+export function ClaimModal({ spaceId, onClose, onSubmit, isSubmitting }: ClaimModalProps) {
   const [name, setName] = useState('');
   const [url, setUrl] = useState('');
   
   const handleClaim = (e: React.FormEvent) => {
     e.preventDefault();
-    if (isSubmitting) return;
-    onSubmit(name, url);
+    if (isSubmitting || !spaceId) return;
+    onSubmit(spaceId, name, url);
   };
+
+  if (!spaceId) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/60 backdrop-blur-md animate-in fade-in duration-200">
@@ -29,7 +32,8 @@ export function ClaimModal({ onClose, onSubmit, isSubmitting }: ClaimModalProps)
           ✕
         </button>
         
-        <h2 className="text-sm font-bold tracking-[0.15em] mb-8 text-black text-center uppercase">Reserve Space</h2>
+        <h2 className="text-sm font-bold tracking-[0.15em] mb-2 text-black text-center uppercase">Reserve Space</h2>
+        <p className="text-[10px] text-center text-gray-400 font-mono mb-8 uppercase tracking-widest">#{spaceId.toLocaleString()}</p>
         
         <form onSubmit={handleClaim}>
           <div className="mb-6">
