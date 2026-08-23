@@ -23,6 +23,15 @@ export async function getClaims() {
   return claims;
 }
 
+export async function getSpace(id: string) {
+  const claim = claims.find(c => c.id === id);
+  if (!claim) return null;
+  return {
+    ...claim,
+    claimedAt: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+  };
+}
+
 export async function claimArea(name: string, url: string, description: string, x: number, y: number, w: number, h: number) {
   if (!name || !url) return { error: 'Company Name and URL are required.' };
   
