@@ -1,35 +1,26 @@
 ﻿'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Claim } from '@/app/actions';
 
 interface GridVisualProps {
   claims: Claim[];
-  mode: 'pan' | 'select';
   onSelectionChange: (rect: { x: number, y: number, w: number, h: number } | null) => void;
 }
 
-export function GridVisual({ claims, mode, onSelectionChange }: GridVisualProps) {
+export function GridVisual({ claims, onSelectionChange }: GridVisualProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   
-  // Viewport transforms
-  const [scale, setScale] = useState(1);
-  const [translate, setTranslate] = useState({ x: 0, y: 0 });
-  
-  // Interaction states
   const [isDragging, setIsDragging] = useState(false);
   const [startPos, setStartPos] = useState({ x: 0, y: 0 });
   const [currentPos, setCurrentPos] = useState({ x: 0, y: 0 });
-  const [lastPan, setLastPan] = useState({ x: 0, y: 0 });
 
-  // Image cache
-  const imageCache = useRef<Record<string, HTMLImageElement>>({});
   const [renderTick, setRenderTick] = useState(0);
+  const imageCache = useRef<Record<string, HTMLImageElement>>({});
 
-  const SIDE = 1000; // 1,000,000 pixels = 1000x1000
+  const SIDE = 1000;
 
-  // Handle rendering
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -39,12 +30,12 @@ export function GridVisual({ claims, mode, onSelectionChange }: GridVisualProps)
     canvas.width = SIDE;
     canvas.height = SIDE;
 
-    // Fill background (unclaimed)
-    ctx.fillStyle = '#111111';
+    // Fill background (black canvas)
+    ctx.fillStyle = '#000000';
     ctx.fillRect(0, 0, SIDE, SIDE);
 
-    // Draw grid lines (very subtle)
-    ctx.strokeStyle = '#222222';
+    // Draw subtle grid (every 10px = 1 block)
+    ctx.strokeStyle = '#111111';
     ctx.lineWidth = 1;
     ctx.beginPath();
     for (let i = 0; i <= SIDE; i += 10) {
@@ -57,11 +48,10 @@ export function GridVisual({ claims, mode, onSelectionChange }: GridVisualProps)
 
     // Draw claims
     claims.forEach(claim => {
-      // Draw white background for claimed block
+      // White background for the claimed pixels
       ctx.fillStyle = '#FFFFFF';
       ctx.fillRect(claim.x, claim.y, claim.w, claim.h);
 
-      // Draw logo
       if (!imageCache.current[claim.logoUrl]) {
         const img = new Image();
         img.crossOrigin = 'anonymous';
@@ -72,59 +62,47 @@ export function GridVisual({ claims, mode, onSelectionChange }: GridVisualProps)
         ctx.drawImage(imageCache.current[claim.logoUrl], claim.x, claim.y, claim.w, claim.h);
       }
     });
-
   }, [claims, renderTick]);
 
   const handlePointerDown = (e: React.PointerEvent) => {
     if (!containerRef.current) return;
+    
+    // In a fixed 1000x1000 element, native event offsetX/Y is perfect
+    const cx = Math.round(e.nativeEvent.offsetX);
+    const cy = Math.round(e.nativeEvent.offsetY);
+
+    // Snap to 10x10 grid (optional, but standard for 1millionpixels)
+    const snapX = Math.floor(cx / 10) * 10;
+    const snapY = Math.floor(cy / 10) * 10;
+
     setIsDragging(true);
+    setStartPos({ x: snapX, y: snapY });
+    setCurrentPos({ x: snapX, y: snapY });
+    onSelectionChange(null);
     containerRef.current.setPointerCapture(e.pointerId);
-
-    if (mode === 'pan') {
-      setLastPan({ x: e.clientX, y: e.clientY });
-    } else {
-      // Calculate exact internal canvas coordinates
-      const rect = canvasRef.current!.getBoundingClientRect();
-      // offsetX/Y on the canvas event is reliable, but PointerEvent is attached to container.
-      // So we map clientX to the canvas rect.
-      let cx = (e.clientX - rect.left) / scale;
-      let cy = (e.clientY - rect.top) / scale;
-      cx = Math.max(0, Math.min(Math.round(cx), SIDE));
-      cy = Math.max(0, Math.min(Math.round(cy), SIDE));
-
-      setStartPos({ x: cx, y: cy });
-      setCurrentPos({ x: cx, y: cy });
-      onSelectionChange(null);
-    }
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging) return;
+    
+    const cx = Math.max(0, Math.min(Math.round(e.nativeEvent.offsetX), SIDE));
+    const cy = Math.max(0, Math.min(Math.round(e.nativeEvent.offsetY), SIDE));
 
-    if (mode === 'pan') {
-      const dx = e.clientX - lastPan.x;
-      const dy = e.clientY - lastPan.y;
-      setTranslate(prev => ({ x: prev.x + dx, y: prev.y + dy }));
-      setLastPan({ x: e.clientX, y: e.clientY });
+    // Snap to 10x10 grid
+    const snapX = Math.ceil(cx / 10) * 10;
+    const snapY = Math.ceil(cy / 10) * 10;
+
+    setCurrentPos({ x: snapX, y: snapY });
+
+    const x = Math.min(startPos.x, snapX);
+    const y = Math.min(startPos.y, snapY);
+    const w = Math.abs(snapX - startPos.x);
+    const h = Math.abs(snapY - startPos.y);
+
+    if (w > 0 && h > 0) {
+      onSelectionChange({ x, y, w, h });
     } else {
-      const rect = canvasRef.current!.getBoundingClientRect();
-      let cx = (e.clientX - rect.left) / scale;
-      let cy = (e.clientY - rect.top) / scale;
-      cx = Math.max(0, Math.min(Math.round(cx), SIDE));
-      cy = Math.max(0, Math.min(Math.round(cy), SIDE));
-      
-      setCurrentPos({ x: cx, y: cy });
-
-      const x = Math.min(startPos.x, cx);
-      const y = Math.min(startPos.y, cy);
-      const w = Math.abs(cx - startPos.x);
-      const h = Math.abs(cy - startPos.y);
-
-      if (w > 0 && h > 0) {
-        onSelectionChange({ x, y, w, h });
-      } else {
-        onSelectionChange(null);
-      }
+      onSelectionChange(null);
     }
   };
 
@@ -133,66 +111,33 @@ export function GridVisual({ claims, mode, onSelectionChange }: GridVisualProps)
     containerRef.current?.releasePointerCapture(e.pointerId);
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const zoomSensitivity = 0.002;
-    const delta = -e.deltaY * zoomSensitivity;
-    
-    // Zoom around cursor
-    if (!containerRef.current) return;
-    const containerRect = containerRef.current.getBoundingClientRect();
-    
-    const mouseX = e.clientX - containerRect.left;
-    const mouseY = e.clientY - containerRect.top;
-    
-    // Center point relative to container center
-    const cx = containerRect.width / 2;
-    const cy = containerRect.height / 2;
-    
-    const newScale = Math.max(0.2, Math.min(scale * (1 + delta), 20)); // min 0.2x, max 20x
-    const scaleRatio = newScale / scale;
-    
-    // Adjust translation so cursor stays in same physical spot
-    const newTx = mouseX - (mouseX - translate.x - cx) * scaleRatio - cx;
-    const newTy = mouseY - (mouseY - translate.y - cy) * scaleRatio - cy;
-    
-    setScale(newScale);
-    setTranslate({ x: newTx, y: newTy });
-  };
-
   const selX = Math.min(startPos.x, currentPos.x);
   const selY = Math.min(startPos.y, currentPos.y);
   const selW = Math.abs(currentPos.x - startPos.x);
   const selH = Math.abs(currentPos.y - startPos.y);
 
   return (
-    <div 
-      ref={containerRef}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-      onPointerCancel={handlePointerUp}
-      onWheel={handleWheel}
-      className={`relative w-full h-full overflow-hidden touch-none border border-white/10 shadow-[0_0_50px_rgba(255,255,255,0.05)] ${mode === 'pan' ? 'cursor-grab active:cursor-grabbing' : 'cursor-crosshair'}`}
-    >
+    <div className="w-full h-full overflow-auto bg-[#1a1a1a] flex items-start justify-center p-8 custom-scrollbar">
+      {/* FIXED 1000x1000 Container */}
       <div 
-        className="absolute top-1/2 left-1/2 origin-top-left"
-        style={{
-          transform: `translate(calc(-50% + ${translate.x}px), calc(-50% + ${translate.y}px)) scale(${scale})`,
-          width: SIDE,
-          height: SIDE,
-        }}
+        ref={containerRef}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        className="relative shadow-[0_0_100px_rgba(255,255,255,0.1)] border border-white/20 touch-none flex-shrink-0 cursor-crosshair"
+        style={{ width: SIDE, height: SIDE }}
       >
         <canvas 
           ref={canvasRef}
-          className="w-full h-full"
+          className="absolute inset-0 w-full h-full pointer-events-none"
           style={{ imageRendering: 'pixelated' }}
         />
         
         {/* Selection Overlay */}
-        {mode === 'select' && isDragging && selW > 0 && selH > 0 && (
+        {isDragging && selW > 0 && selH > 0 && (
           <div 
-            className="absolute border border-white bg-white/20 mix-blend-difference pointer-events-none"
+            className="absolute border-2 border-white bg-white/30 mix-blend-difference pointer-events-none"
             style={{
               left: selX,
               top: selY,

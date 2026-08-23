@@ -12,8 +12,6 @@ export default function Home() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [successState, setSuccessState] = useState<{pixels: number, name: string} | null>(null);
   const [claiming, setClaiming] = useState(false);
-  
-  const [mode, setMode] = useState<'pan' | 'select'>('pan');
   const [selection, setSelection] = useState<{x: number, y: number, w: number, h: number} | null>(null);
 
   useEffect(() => {
@@ -43,7 +41,6 @@ export default function Home() {
         setClaims(prev => [...prev, res.claim!]);
         setSuccessState({ pixels: selection.w * selection.h, name });
         setSelection(null);
-        setMode('pan'); // auto switch back to pan
       }
     } catch (err) {
       setClaiming(false);
@@ -55,7 +52,7 @@ export default function Home() {
 
   if (successState) {
     return (
-      <main className="min-h-screen w-full bg-black flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500 selection:bg-white selection:text-black">
+      <main className="min-h-screen w-full bg-[#0a0a0a] flex flex-col items-center justify-center p-6 text-center animate-in fade-in duration-500 selection:bg-white selection:text-black">
         <div className="max-w-md w-full flex flex-col items-center">
           <h1 className="text-2xl md:text-3xl font-bold tracking-tighter text-white mb-10 uppercase leading-snug">
             PIXELS SECURED.
@@ -80,61 +77,60 @@ export default function Home() {
   }
 
   return (
-    <div className="h-screen w-full bg-black flex flex-col selection:bg-white selection:text-black text-white relative overflow-hidden">
+    <div className="h-screen w-full bg-[#0a0a0a] flex flex-col text-white">
       
-      {/* ABSOLUTE BACKGROUND TITLE */}
-      <div className="absolute top-6 left-6 md:top-10 md:left-10 z-10 pointer-events-none">
-        <h2 className="text-[10px] md:text-xs font-bold tracking-[0.3em] uppercase text-white/50">
-          The Internet Is Running Out
-        </h2>
-        <p className="text-xl md:text-2xl font-mono mt-2 tracking-tighter">
-          {(TOTAL_SPACES - claimedCount).toLocaleString()} PIXELS LEFT
-        </p>
-      </div>
+      {/* HEADER */}
+      <header className="shrink-0 w-full flex items-center justify-between p-6 border-b border-white/10 bg-black z-20">
+        <div>
+          <h1 className="text-xl md:text-2xl font-bold tracking-tighter uppercase">
+            1 Million Pixels
+          </h1>
+          <p className="text-[10px] uppercase tracking-[0.2em] text-white/50 mt-1">
+            The Internet is running out
+          </p>
+        </div>
+        <div className="text-right">
+          <p className="font-mono text-lg md:text-xl font-bold">
+            {(TOTAL_SPACES - claimedCount).toLocaleString()}
+          </p>
+          <p className="text-[10px] uppercase tracking-widest text-white/50">
+            Pixels Left
+          </p>
+        </div>
+      </header>
 
-      {/* MODE TOGGLE */}
-      <div className="absolute top-6 right-6 md:top-10 md:right-10 z-10 flex gap-2">
-        <button 
-          onClick={() => setMode('pan')}
-          className={`px-4 py-2 text-[10px] uppercase font-bold tracking-widest border transition-colors ${mode === 'pan' ? 'bg-white text-black border-white' : 'bg-black text-white/50 border-white/20 hover:text-white'}`}
-        >
-          🖐️ Pan / Zoom
-        </button>
-        <button 
-          onClick={() => setMode('select')}
-          className={`px-4 py-2 text-[10px] uppercase font-bold tracking-widest border transition-colors ${mode === 'select' ? 'bg-white text-black border-white' : 'bg-black text-white/50 border-white/20 hover:text-white'}`}
-        >
-          🔲 Select
-        </button>
-      </div>
-
-      {/* CANVAS CONTAINER */}
-      <div className="flex-1 w-full h-full">
+      {/* CANVAS AREA (Scrollable) */}
+      <div className="flex-1 w-full relative overflow-hidden bg-[#1a1a1a]">
         <GridVisual 
           claims={claims} 
-          mode={mode}
           onSelectionChange={setSelection}
         />
-      </div>
-
-      {/* HELP TEXT */}
-      <div className="absolute bottom-6 left-6 z-10 pointer-events-none hidden md:block">
-        <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-bold">
-          Scroll to zoom
-        </p>
-      </div>
-
-      {/* FLOATING ACTION BAR */}
-      <div className={`absolute bottom-8 left-1/2 -translate-x-1/2 bg-white text-black px-6 py-4 flex items-center justify-between gap-8 md:gap-16 shadow-[0_0_40px_rgba(255,255,255,0.2)] transition-all duration-300 transform ${selectionPixels > 0 ? 'translate-y-0 opacity-100' : 'translate-y-12 opacity-0 pointer-events-none'}`}>
-        <div className="flex flex-col">
-          <span className="text-[10px] uppercase tracking-widest font-bold text-black/50">Selected</span>
-          <span className="font-mono text-xl md:text-2xl font-bold tracking-tighter leading-none mt-1">
-            {selectionPixels.toLocaleString()}
-          </span>
+        
+        {/* Persistent helper text inside the view */}
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 px-4 py-2 bg-black/80 backdrop-blur border border-white/10 rounded-full text-[10px] uppercase tracking-widest font-bold pointer-events-none text-white/60">
+          Scroll around. Click & drag to select blocks.
         </div>
+      </div>
+
+      {/* BOTTOM ACTION BAR */}
+      <div className={`shrink-0 bg-black border-t border-white/10 p-6 flex flex-col md:flex-row items-center justify-between gap-6 transition-all duration-300 ${selectionPixels > 0 ? 'translate-y-0 opacity-100' : 'translate-y-full absolute opacity-0'}`} style={selectionPixels === 0 ? { bottom: 0, width: '100%' } : {}}>
+        
+        <div className="flex items-center gap-8">
+          <div>
+            <p className="text-[10px] uppercase tracking-widest text-white/50">Selection Area</p>
+            <p className="font-mono text-xl font-bold">{selectionPixels.toLocaleString()} px</p>
+          </div>
+          {selection && (
+            <div>
+              <p className="text-[10px] uppercase tracking-widest text-white/50">Coordinates</p>
+              <p className="font-mono text-xs mt-1">X: {selection.x}, Y: {selection.y}</p>
+            </div>
+          )}
+        </div>
+
         <button 
           onClick={() => setIsModalOpen(true)}
-          className="bg-black text-white px-8 py-3 text-[10px] font-bold uppercase tracking-[0.2em] hover:bg-[#FF3300] transition-colors"
+          className="w-full md:w-auto bg-white text-black px-12 py-4 text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-300 transition-colors"
         >
           CLAIM NOW
         </button>
