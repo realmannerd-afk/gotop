@@ -13,10 +13,12 @@ export function GridVisual({ total, claimed }: GridVisualProps) {
   const animationRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
 
-  if (claimed > lastClaimedRef.current) {
-    lastClaimedRef.current = claimed;
-    startTimeRef.current = performance.now();
-  }
+  useEffect(() => {
+    if (claimed > lastClaimedRef.current) {
+      lastClaimedRef.current = claimed;
+      startTimeRef.current = performance.now();
+    }
+  }, [claimed]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -103,4 +105,5 @@ export function GridVisual({ total, claimed }: GridVisualProps) {
     </div>
   );
 }
+
 
