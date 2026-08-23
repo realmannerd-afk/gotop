@@ -19,7 +19,9 @@ export default function Home() {
   const [formUrl, setFormUrl] = useState('');
   const [formDesc, setFormDesc] = useState('');
 
-  const [buyHint, setBuyHint] = useState(false);
+  const GOLD_START = 400;
+  const GOLD_END = 600;
+  const isGold = (x: number, y: number) => x >= GOLD_START && x < GOLD_END && y >= GOLD_START && y < GOLD_END;
 
   useEffect(() => {
     async function load() {
@@ -33,7 +35,6 @@ export default function Home() {
   }, []);
 
   const handleBlockClick = (x: number, y: number, w: number, h: number) => {
-    setBuyHint(false);
     setSelectedClaim(null);
     setSelectedEmpty({ x, y, w, h });
     setBuyStep(1);
@@ -43,22 +44,21 @@ export default function Home() {
   };
 
   const handleClaimClick = (claim: Claim) => {
-    setBuyHint(false);
     setSelectedEmpty(null);
     setSelectedClaim(claim);
   };
 
   const handleHeaderBuyClick = () => {
-    // Find first available 10x10 space starting from center-ish to look good
+    // Try to find a premium gold spot first
     let foundX = 490, foundY = 490;
     let found = false;
     
-    // Check center first
+    // Check center gold spot
     const centerOverlap = claims.find(c => 490 >= c.x && 490 < c.x + c.w && 490 >= c.y && 490 < c.y + c.h);
     if (!centerOverlap) {
       found = true;
     } else {
-      // Fallback search
+      // Find any available spot
       for (let y = 0; y < 1000 && !found; y += 10) {
         for (let x = 0; x < 1000 && !found; x += 10) {
           const overlap = claims.find(c => x >= c.x && x < c.x + c.w && y >= c.y && y < c.y + c.h);
@@ -100,6 +100,8 @@ export default function Home() {
   };
 
   const claimedCount = claims.reduce((acc, c) => acc + (c.w * c.h), 0);
+  const price = selectedEmpty ? (isGold(selectedEmpty.x, selectedEmpty.y) ? 500 : 10) : 0;
+  const isPremium = selectedEmpty && isGold(selectedEmpty.x, selectedEmpty.y);
 
   if (loading) return <div className="h-screen w-screen bg-[#FAFAF9]" />;
 
@@ -107,7 +109,7 @@ export default function Home() {
     <div className="h-screen w-screen bg-[#FAFAF9] flex flex-col text-[#111111] overflow-hidden font-sans">
       
       {/* HEADER */}
-      <header className="shrink-0 h-14 md:h-16 w-full flex items-center justify-between px-6 border-b border-[#E5E5E5] bg-white z-20">
+      <header className="shrink-0 h-14 md:h-16 w-full flex items-center justify-between px-6 border-b border-[#E5E5E5] bg-white z-20 shadow-sm">
         <h1 className="text-xs font-bold tracking-[0.1em] uppercase">
           The Internet Is Running Out.
         </h1>
@@ -117,7 +119,7 @@ export default function Home() {
           </p>
           <button 
             onClick={handleHeaderBuyClick}
-            className="text-[10px] font-bold uppercase tracking-widest hover:text-[#737373] transition-colors bg-[#111111] text-white px-4 py-2 hover:bg-[#737373]"
+            className="text-[10px] font-bold uppercase tracking-widest transition-colors bg-[#111111] text-white px-4 py-2 hover:bg-[#737373]"
           >
             BUY SPACE
           </button>
@@ -134,11 +136,13 @@ export default function Home() {
         
         {/* PURCHASE PANEL */}
         {selectedEmpty && (
-          <div className="absolute top-6 right-6 w-80 bg-white border border-[#E5E5E5] shadow-sm flex flex-col z-30">
+          <div className="absolute top-6 right-6 w-80 bg-white border border-[#E5E5E5] shadow-lg flex flex-col z-30 animate-in fade-in slide-in-from-right-4 duration-200">
             {buyStep === 1 ? (
               <div className="p-6 flex flex-col">
                 <div className="flex justify-between items-start mb-6">
-                  <h2 className="text-[10px] uppercase tracking-widest font-bold">Buy Space</h2>
+                  <h2 className={`text-[10px] uppercase tracking-widest font-bold ${isPremium ? 'text-[#D4AF37]' : ''}`}>
+                    {isPremium ? 'Buy Gold Space' : 'Buy Space'}
+                  </h2>
                   <button onClick={() => setSelectedEmpty(null)} className="text-[#737373] hover:text-[#111111] text-lg leading-none">&times;</button>
                 </div>
                 
@@ -152,12 +156,14 @@ export default function Home() {
                 </div>
                 <div className="flex justify-between mb-8 border-t border-[#E5E5E5] pt-4">
                   <span className="text-[10px] uppercase text-[#737373] font-bold tracking-widest">Price</span>
-                  <span className="font-mono text-sm font-bold">$10</span>
+                  <span className={`font-mono text-sm font-bold ${isPremium ? 'text-[#D4AF37]' : ''}`}>
+                    ${price}
+                  </span>
                 </div>
                 
                 <button 
                   onClick={() => setBuyStep(2)}
-                  className="w-full bg-[#111111] text-white py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-[#737373] transition-colors"
+                  className={`w-full text-white py-3 text-[10px] uppercase tracking-widest font-bold transition-colors ${isPremium ? 'bg-[#D4AF37] hover:bg-[#C5A028]' : 'bg-[#111111] hover:bg-[#737373]'}`}
                 >
                   Continue
                 </button>
@@ -176,9 +182,9 @@ export default function Home() {
                 <button 
                   type="submit"
                   disabled={claiming}
-                  className="w-full bg-[#111111] text-white py-3 text-[10px] uppercase tracking-widest font-bold hover:bg-[#737373] transition-colors disabled:opacity-50"
+                  className={`w-full text-white py-3 text-[10px] uppercase tracking-widest font-bold transition-colors disabled:opacity-50 ${isPremium ? 'bg-[#D4AF37] hover:bg-[#C5A028]' : 'bg-[#111111] hover:bg-[#737373]'}`}
                 >
-                  {claiming ? 'Processing...' : 'Confirm $10'}
+                  {claiming ? 'Processing...' : `Confirm $${price}`}
                 </button>
               </form>
             )}
@@ -187,7 +193,7 @@ export default function Home() {
 
         {/* INFO PANEL */}
         {selectedClaim && (
-          <div className="absolute top-6 right-6 w-80 bg-white border border-[#E5E5E5] shadow-sm flex flex-col z-30 p-6">
+          <div className="absolute top-6 right-6 w-80 bg-white border border-[#E5E5E5] shadow-lg flex flex-col z-30 p-6 animate-in fade-in slide-in-from-right-4 duration-200">
              <div className="flex justify-between items-start mb-6">
                 <img src={selectedClaim.logoUrl} alt="" className="w-8 h-8 object-contain" />
                 <button onClick={() => setSelectedClaim(null)} className="text-[#737373] hover:text-[#111111] text-lg leading-none">&times;</button>
