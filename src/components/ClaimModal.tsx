@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 
@@ -19,53 +19,51 @@ export function ClaimModal({ onClose, onSubmit, isSubmitting }: ClaimModalProps)
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/10 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-white border border-[#E5E5E5] w-full max-w-md p-8 shadow-2xl relative">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white/60 backdrop-blur-md animate-in fade-in duration-200">
+      <div className="bg-white border border-[#EAEAEA] w-full max-w-sm p-10 shadow-[0_0_60px_rgba(0,0,0,0.05)] relative">
         <button 
           onClick={onClose}
           disabled={isSubmitting}
-          className="absolute top-4 right-4 text-gray-400 hover:text-black transition-colors disabled:opacity-50"
+          className="absolute top-4 right-5 text-gray-300 hover:text-black transition-colors disabled:opacity-50 text-xl font-light"
         >
-          ?
+          ✕
         </button>
         
-        <h2 className="text-xl font-bold tracking-tight mb-6 text-black">IMMORTALIZE YOUR COMPANY</h2>
+        <h2 className="text-sm font-bold tracking-[0.15em] mb-8 text-black text-center uppercase">Reserve Space</h2>
         
         <form onSubmit={handleClaim}>
           <div className="mb-6">
-            <label className="block text-xs font-bold tracking-widest text-gray-500 mb-2 uppercase">Company Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value.slice(0, 80))}
-              placeholder="Acme Inc."
+              placeholder="Company Name"
               disabled={isSubmitting}
-              className="w-full bg-[#FAFAFA] border border-[#E5E5E5] px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-[#FF3300] transition-colors disabled:opacity-50"
+              className="w-full bg-transparent border-b border-[#EAEAEA] pb-3 text-black placeholder-gray-400 focus:outline-none focus:border-black transition-colors disabled:opacity-50 text-sm"
               maxLength={80}
               required
             />
           </div>
 
-          <div className="mb-8">
-            <label className="block text-xs font-bold tracking-widest text-gray-500 mb-2 uppercase">Website URL</label>
+          <div className="mb-10">
             <input
               type="url"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               placeholder="https://acme.com"
               disabled={isSubmitting}
-              className="w-full bg-[#FAFAFA] border border-[#E5E5E5] px-4 py-3 text-black placeholder-gray-400 focus:outline-none focus:border-[#FF3300] transition-colors disabled:opacity-50"
+              className="w-full bg-transparent border-b border-[#EAEAEA] pb-3 text-black placeholder-gray-400 focus:outline-none focus:border-black transition-colors disabled:opacity-50 text-sm"
               required
             />
-            <p className="text-[10px] text-gray-400 mt-2">Your company logo will be fetched automatically.</p>
+            <p className="text-[9px] text-gray-400 mt-3 tracking-widest uppercase text-center">Logo is fetched automatically</p>
           </div>
 
           <button 
             type="submit"
             disabled={isSubmitting || !name || !url}
-            className="w-full bg-black text-white font-bold py-4 px-8 hover:bg-[#FF3300] hover:text-white transition-colors uppercase tracking-widest text-sm disabled:opacity-50"
+            className="w-full bg-black text-white font-bold py-4 hover:bg-[#FF3300] transition-colors uppercase tracking-[0.2em] text-[10px] disabled:opacity-50 shadow-md"
           >
-            {isSubmitting ? 'CLAIMING...' : 'CLAIM SPACE'}
+            {isSubmitting ? 'PROCESSING...' : 'CONFIRM'}
           </button>
         </form>
       </div>

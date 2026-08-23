@@ -1,4 +1,4 @@
-"use server";
+﻿"use server";
 
 import { supabaseServer } from '@/lib/supabase';
 import { randomUUID } from 'crypto';
@@ -18,7 +18,6 @@ export async function getStats() {
     .select('*', { count: 'exact', head: true });
     
   if (error) {
-    console.error("Count error", error);
     return { claimed: 0 };
   }
   
@@ -26,7 +25,6 @@ export async function getStats() {
 }
 
 export async function getAllClaims() {
-  // Fetch up to 10,000 for the grid display MVP
   const { data, error } = await supabaseServer
     .from('spaces')
     .select('id, name, url, logo_url, claimed_at')
@@ -34,7 +32,6 @@ export async function getAllClaims() {
     .limit(10000);
     
   if (error) {
-    console.error("Claims error", error);
     return [];
   }
   
@@ -90,7 +87,13 @@ export async function claimSpace(name: string, url: string) {
   let claimedId = null;
   
   while (attempts < 5) {
-    const { count } = await supabaseServer.from('spaces').select('*', { count: 'exact', head: true });
+    const { count, error: countError } = await supabaseServer.from('spaces').select('*', { count: 'exact', head: true });
+    
+    // Check if table exists error
+    if (countError && countError.code === '42P01') {
+      return { error: 'Database not setup. Please run the SQL migration in Supabase.' };
+    }
+
     const nextId = (count || 0) + 1;
     
     if (nextId > 1000000) {
@@ -111,7 +114,7 @@ export async function claimSpace(name: string, url: string) {
     }
     
     if (insertError.code !== '23505') {
-      return { error: 'Database error occurred.' };
+      return { error: 'Database error occurred: ' + insertError.message };
     }
     
     attempts++;
