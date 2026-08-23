@@ -1,4 +1,4 @@
-import { getSpace } from '@/app/actions';
+﻿import { getSpace } from '@/app/actions';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
@@ -14,13 +14,13 @@ export default async function SpacePage({ params }: { params: Promise<{ id: stri
 
   if (!space) {
     return (
-      <main className="min-h-screen w-full bg-[#F2F1EC] flex flex-col items-center justify-center p-6 text-center text-black">
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tighter mb-8">
+      <main className="min-h-screen w-full bg-[#FAFAFA] flex flex-col items-center justify-center p-6 text-center text-black">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tighter mb-8 uppercase">
           This space hasn&apos;t been claimed yet.
         </h1>
         <Link 
           href="/"
-          className="bg-black text-[#F2F1EC] font-bold py-5 px-12 hover:bg-[#FF3300] transition-colors uppercase tracking-[0.2em] text-[10px]"
+          className="bg-black text-white font-bold py-5 px-12 hover:bg-[#FF3300] transition-colors uppercase tracking-[0.2em] text-[10px]"
         >
           CLAIM THIS SPACE
         </Link>
@@ -28,32 +28,51 @@ export default async function SpacePage({ params }: { params: Promise<{ id: stri
     );
   }
 
+  // Small visualization
+  const TOTAL = 1000000;
+  const SIDE = Math.ceil(Math.sqrt(TOTAL));
+  const idx = space.id - 1;
+  const col = idx % SIDE;
+  const row = Math.floor(idx / SIDE);
+  const leftPct = (col / SIDE) * 100;
+  const topPct = (row / SIDE) * 100;
+
   return (
-    <main className="min-h-screen w-full bg-[#F2F1EC] flex flex-col items-center justify-center p-6 text-center selection:bg-black selection:text-[#F2F1EC] text-black">
+    <main className="min-h-screen w-full bg-[#FAFAFA] flex flex-col items-center justify-center p-6 text-center selection:bg-black selection:text-white text-black">
       <div className="mb-12">
-        <p className="text-[10px] md:text-xs tracking-[0.3em] font-bold uppercase mb-4">
-          A piece of the internet
-        </p>
-        <h1 className="text-4xl md:text-6xl font-bold tracking-tighter">
+        <h1 className="text-3xl md:text-5xl font-bold tracking-tighter uppercase">
           SPACE #{space.id.toLocaleString()}
         </h1>
       </div>
 
-      <div className="bg-[#F2F1EC] border border-black/20 p-12 md:p-16 max-w-2xl w-full mb-12 shadow-2xl flex flex-col items-center">
-        <h2 className="text-2xl md:text-4xl font-medium leading-snug">
+      <div className="bg-white border border-black/10 p-12 md:p-16 max-w-2xl w-full mb-12 shadow-sm flex flex-col items-center">
+        <p className="text-[10px] font-bold tracking-[0.2em] text-black/40 mb-6 uppercase">Message</p>
+        <h2 className="text-2xl md:text-3xl font-medium leading-snug mb-10">
           &quot;{space.message}&quot;
         </h2>
-        <p className="text-[10px] text-black/40 mt-12 font-mono uppercase tracking-widest">
-          Claimed: {space.claimedAt}
+        <p className="text-[10px] font-bold tracking-[0.2em] text-black/40 mb-2 uppercase">Claimed</p>
+        <p className="text-sm font-mono tracking-widest text-black">
+          {space.claimedAt}
         </p>
+      </div>
+
+      {/* Small visualization */}
+      <div className="flex flex-col items-center mb-16">
+        <p className="text-[10px] font-bold tracking-[0.2em] text-black/40 mb-4 uppercase">Location in the Internet</p>
+        <div className="w-48 h-48 border border-black/10 bg-white relative">
+          <div 
+            className="absolute bg-black w-2 h-2 rounded-full transform -translate-x-1/2 -translate-y-1/2"
+            style={{ left: `${leftPct}%`, top: `${topPct}%` }}
+          />
+        </div>
       </div>
 
       <div className="flex flex-col items-center">
         <Link 
           href="/"
-          className="bg-transparent border border-black/20 text-black font-bold py-5 px-12 hover:bg-black hover:text-[#F2F1EC] transition-colors uppercase tracking-[0.2em] text-[10px]"
+          className="bg-black text-white font-bold py-5 px-12 hover:bg-[#FF3300] transition-colors uppercase tracking-[0.2em] text-[10px]"
         >
-          THE INTERNET IS RUNNING OUT
+          CLAIM YOUR OWN SPACE
         </Link>
       </div>
     </main>
