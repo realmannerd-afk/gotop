@@ -49,11 +49,30 @@ export default function Home() {
   };
 
   const handleHeaderBuyClick = () => {
-    // If they click BUY SPACE in header, we try to open a default block if nothing is selected,
-    // or we just show a helpful hint to click the canvas.
-    if (!selectedEmpty && !selectedClaim) {
-      setBuyHint(true);
-      setTimeout(() => setBuyHint(false), 4000);
+    // Find first available 10x10 space starting from center-ish to look good
+    let foundX = 490, foundY = 490;
+    let found = false;
+    
+    // Check center first
+    const centerOverlap = claims.find(c => 490 >= c.x && 490 < c.x + c.w && 490 >= c.y && 490 < c.y + c.h);
+    if (!centerOverlap) {
+      found = true;
+    } else {
+      // Fallback search
+      for (let y = 0; y < 1000 && !found; y += 10) {
+        for (let x = 0; x < 1000 && !found; x += 10) {
+          const overlap = claims.find(c => x >= c.x && x < c.x + c.w && y >= c.y && y < c.y + c.h);
+          if (!overlap) {
+            foundX = x;
+            foundY = y;
+            found = true;
+          }
+        }
+      }
+    }
+
+    if (found) {
+      handleBlockClick(foundX, foundY, 10, 10);
     }
   };
 
@@ -98,7 +117,7 @@ export default function Home() {
           </p>
           <button 
             onClick={handleHeaderBuyClick}
-            className="text-[10px] font-bold uppercase tracking-widest hover:text-[#737373] transition-colors"
+            className="text-[10px] font-bold uppercase tracking-widest hover:text-[#737373] transition-colors bg-[#111111] text-white px-4 py-2 hover:bg-[#737373]"
           >
             BUY SPACE
           </button>
@@ -112,13 +131,6 @@ export default function Home() {
           onBlockClick={handleBlockClick}
           onClaimClick={handleClaimClick}
         />
-
-        {/* HINT OVERLAY (triggered by header button) */}
-        {buyHint && (
-          <div className="absolute top-6 left-1/2 -translate-x-1/2 bg-[#111111] text-white px-6 py-3 text-xs font-bold uppercase tracking-widest shadow-lg animate-in fade-in slide-in-from-top-4 duration-300 z-40">
-            Click anywhere on the grid below to select a space.
-          </div>
-        )}
         
         {/* PURCHASE PANEL */}
         {selectedEmpty && (
