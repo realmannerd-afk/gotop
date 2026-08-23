@@ -59,7 +59,7 @@ export default function Home() {
 
   if (successState) {
     return (
-      <main className="relative z-10 flex flex-col items-center justify-center h-screen w-screen bg-[#FAFAFA] p-6 text-center">
+      <div className="relative min-h-screen w-full bg-[#FAFAFA] flex flex-col items-center justify-center p-6 text-center">
         <h2 className="text-[10px] md:text-xs font-bold tracking-[0.3em] text-black/50 mb-12 uppercase">
           Digital Certificate
         </h2>
@@ -105,16 +105,16 @@ export default function Home() {
         >
           Return
         </button>
-      </main>
+      </div>
     );
   }
 
   return (
-    <div className="relative min-h-screen w-full bg-[#FAFAFA] flex flex-col overflow-hidden selection:bg-black selection:text-white">
+    <div className="relative min-h-screen w-full bg-[#FAFAFA] flex flex-col selection:bg-black selection:text-white overflow-x-hidden">
       {/* 1M PIXEL CANVAS BACKGROUND */}
       <GridVisual total={TOTAL_SPACES} spaces={spaces} />
       
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-between p-6 md:p-12 w-full max-w-5xl mx-auto pointer-events-none">
+      <main className="relative z-10 flex-1 flex flex-col items-center justify-between p-6 md:p-12 w-full max-w-5xl mx-auto pointer-events-none min-h-screen">
         
         {/* TOP: THE INTERNET IS RUNNING OUT */}
         <div className="w-full text-center mt-4 md:mt-8">
@@ -124,7 +124,7 @@ export default function Home() {
         </div>
 
         {/* MIDDLE: HOW MUCH IS LEFT? */}
-        <div className="flex flex-col items-center justify-center flex-1 w-full my-12">
+        <div className="flex flex-col items-center justify-center flex-1 w-full py-12">
           <h1 
             className="text-[15vw] md:text-[180px] leading-[0.85] font-bold tracking-tighter text-black tabular-nums"
             style={{ WebkitTextStroke: '1px rgba(0,0,0,0.1)' }}
@@ -146,15 +146,15 @@ export default function Home() {
           </button>
           
           {spaces.length > 0 && (
-            <div className="mt-12 flex items-center justify-center gap-4 opacity-40 hover:opacity-100 transition-opacity duration-500 max-w-full overflow-hidden">
-              {spaces.slice(-6).reverse().map(space => (
+            <div className="mt-12 flex flex-wrap items-center justify-center gap-4 opacity-50 hover:opacity-100 transition-opacity duration-500 w-full max-w-md">
+              {spaces.slice(-12).reverse().map(space => (
                 <a 
                   key={space.id} 
                   href={space.url} 
                   target="_blank" 
                   rel="noopener noreferrer"
                   title={space.name}
-                  className="w-8 h-8 grayscale hover:grayscale-0 hover:scale-110 transition-all block"
+                  className="w-8 h-8 grayscale hover:grayscale-0 hover:scale-110 transition-all block flex-shrink-0"
                 >
                   {space.logoUrl ? (
                     <img src={space.logoUrl} alt={space.name} className="w-full h-full object-contain" />
@@ -166,17 +166,16 @@ export default function Home() {
             </div>
           )}
         </div>
-
-        {isModalOpen && (
-          <div className="pointer-events-auto w-full">
-            <ClaimModal 
-              onClose={() => setIsModalOpen(false)} 
-              onSubmit={handleClaimSubmit} 
-              isSubmitting={claiming}
-            />
-          </div>
-        )}
       </main>
+
+      {/* RENDER MODAL OUTSIDE MAIN TO AVOID STACKING / POINTER EVENT ISSUES */}
+      {isModalOpen && (
+        <ClaimModal 
+          onClose={() => setIsModalOpen(false)} 
+          onSubmit={handleClaimSubmit} 
+          isSubmitting={claiming}
+        />
+      )}
     </div>
   );
 }
