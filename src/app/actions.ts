@@ -6,12 +6,13 @@ import { cookies } from 'next/headers';
 
 export interface Space {
   id: number;
-  message: string;
+  name: string;
+  url: string;
+  logoUrl: string | null;
   claimedAt: string;
 }
 
 export async function getStats() {
-  // Use exact count (count: 'exact', head: true)
   const { count, error } = await supabaseServer
     .from('spaces')
     .select('*', { count: 'exact', head: true });
@@ -24,21 +25,24 @@ export async function getStats() {
   return { claimed: count || 0 };
 }
 
-export async function getRecentClaims() {
+export async function getAllClaims() {
+  // Fetch up to 10,000 for the grid display MVP
   const { data, error } = await supabaseServer
     .from('spaces')
-    .select('id, message, claimed_at')
-    .order('claimed_at', { ascending: false })
-    .limit(10);
+    .select('id, name, url, logo_url, claimed_at')
+    .order('id', { ascending: true })
+    .limit(10000);
     
   if (error) {
-    console.error("Recent claims error", error);
+    console.error("Claims error", error);
     return [];
   }
   
   return data.map(d => ({
     id: d.id,
-    message: d.message,
+    name: d.name,
+    url: d.url,
+    logoUrl: d.logo_url,
     claimedAt: new Date(d.claimed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   }));
 }
@@ -46,7 +50,7 @@ export async function getRecentClaims() {
 export async function getSpace(id: number) {
   const { data, error } = await supabaseServer
     .from('spaces')
-    .select('id, message, claimed_at')
+    .select('id, name, url, logo_url, claimed_at')
     .eq('id', id)
     .single();
     
@@ -54,15 +58,16 @@ export async function getSpace(id: number) {
   
   return {
     id: data.id,
-    message: data.message,
+    name: data.name,
+    url: data.url,
+    logoUrl: data.logo_url,
     claimedAt: new Date(data.claimed_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
   };
 }
 
-export async function claimSpace(message: string) {
-  if (!message || message.length > 80) {
-    return { error: 'Message must be between 1 and 80 characters.' };
-  }
+export async function claimSpace(name: string, url: string) {
+  if (!name || name.length > 80) return { error: 'Name must be 1-80 chars.' };
+  if (!url || url.length > 255) return { error: 'Invalid URL.' };
 
   const cookieStore = await cookies();
   let sessId = cookieStore.get('anon_session')?.value;
@@ -71,9 +76,16 @@ export async function claimSpace(message: string) {
     cookieStore.set('anon_session', sessId, { maxAge: 60*60*24*365, httpOnly: true });
   }
 
-  // To assign a space, we determine the next available ID safely.
-  // The simplest is to get the current count and add 1.
-  // Because multiple people might try simultaneously, we retry if duplicate.
+  let domain = '';
+  try {
+    const formatted = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+    domain = new URL(formatted).hostname;
+  } catch (e) {
+    return { error: 'Invalid URL format.' };
+  }
+
+  const logo_url = `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+
   let attempts = 0;
   let claimedId = null;
   
@@ -82,12 +94,14 @@ export async function claimSpace(message: string) {
     const nextId = (count || 0) + 1;
     
     if (nextId > 1000000) {
-      return { error: 'All spaces have been claimed.' };
+      return { error: 'All spaces claimed.' };
     }
 
     const { error: insertError } = await supabaseServer.from('spaces').insert({
       id: nextId,
-      message,
+      name,
+      url,
+      logo_url,
       anonymous_session_id: sessId
     });
 
@@ -96,18 +110,14 @@ export async function claimSpace(message: string) {
       break;
     }
     
-    // If it's a unique constraint violation on ID, loop will retry.
-    // Otherwise, something is broken.
-    if (insertError.code !== '23505') { // 23505 is PostgreSQL unique_violation
-      return { error: 'Database error occurred. Please try again.' };
+    if (insertError.code !== '23505') {
+      return { error: 'Database error occurred.' };
     }
     
     attempts++;
   }
 
-  if (!claimedId) {
-    return { error: 'High traffic. Please try claiming again.' };
-  }
+  if (!claimedId) return { error: 'High traffic. Please try again.' };
 
-  return { success: true, id: claimedId };
+  return { success: true, id: claimedId, logoUrl: logo_url };
 }
