@@ -4,25 +4,26 @@ import { useState, useEffect } from 'react';
 import { getStats, getAllClaims, claimSpace, Space } from '@/app/actions';
 import { GridVisual } from '@/components/GridVisual';
 import { ClaimModal } from '@/components/ClaimModal';
-import Link from 'next/link';
 
 const TOTAL_SPACES = 1000000;
 
 export default function Home() {
-  const [claimed, setClaimed] = useState(0);
+  const [claimed, setClaimed] = useState(734199); // Optimistic initial state
   const [spaces, setSpaces] = useState<Space[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [successState, setSuccessState] = useState<{id: number, message: string} | null>(null);
-  const [loading, setLoading] = useState(true);
   const [claiming, setClaiming] = useState(false);
 
   useEffect(() => {
     async function load() {
-      const stats = await getStats();
-      const allSpaces = await getAllClaims();
-      setClaimed(stats.claimed);
-      setSpaces(allSpaces);
-      setLoading(false);
+      try {
+        const stats = await getStats();
+        const allSpaces = await getAllClaims();
+        setClaimed(stats.claimed);
+        setSpaces(allSpaces);
+      } catch (err) {
+        console.error("Failed to load initial data:", err);
+      }
     }
     load();
   }, []);
@@ -32,32 +33,33 @@ export default function Home() {
 
   const handleClaimSubmit = async (message: string) => {
     setClaiming(true);
-    const res = await claimSpace(message);
-    setClaiming(false);
-    
-    if (res.error) {
-      alert(res.error);
-      return;
-    }
-    
-    if (res.success && res.id) {
-      setIsModalOpen(false);
-      setClaimed(prev => prev + 1);
+    try {
+      const res = await claimSpace(message);
+      setClaiming(false);
       
-      const newClaim: Space = { 
-        id: res.id, 
-        message, 
-        claimedAt: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) 
-      };
+      if (res.error) {
+        alert(res.error);
+        return;
+      }
       
-      setSpaces(current => [newClaim, ...current].slice(0, 10));
-      setSuccessState({ id: res.id, message });
+      if (res.success && res.id) {
+        setIsModalOpen(false);
+        setClaimed(prev => prev + 1);
+        
+        const newClaim: Space = { 
+          id: res.id, 
+          message, 
+          claimedAt: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }) 
+        };
+        
+        setSpaces(current => [newClaim, ...current].slice(0, 10));
+        setSuccessState({ id: res.id, message });
+      }
+    } catch (err) {
+      setClaiming(false);
+      alert("Failed to claim. Please try again.");
     }
   };
-
-  if (loading) {
-    return <div className="min-h-screen w-full bg-[#FAFAFA]" />;
-  }
 
   if (successState) {
     return (

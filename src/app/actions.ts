@@ -6,29 +6,35 @@ export interface Space {
   claimedAt: string;
 }
 
-// MOCK DATA STORE (per instructions)
-let mockSpaces: Space[] = Array.from({ length: 734199 }, (_, i) => ({
-  id: i + 1,
-  message: i % 2 === 0 ? "I was here." : "hello internet",
-  claimedAt: new Date().toISOString()
-}));
+let simulatedClaimCount = 734199;
+let recentClaims: Space[] = [
+  { id: 734199, message: "I was here.", claimedAt: new Date().toISOString() },
+  { id: 734198, message: "hello internet", claimedAt: new Date().toISOString() },
+  { id: 734197, message: "🚀", claimedAt: new Date().toISOString() },
+  { id: 734196, message: "Testing from Vercel", claimedAt: new Date().toISOString() },
+  { id: 734195, message: "Minimalism.", claimedAt: new Date().toISOString() },
+];
 
 export async function getStats() {
-  return { claimed: mockSpaces.length };
+  return { claimed: simulatedClaimCount };
 }
 
 export async function getAllClaims() {
-  // Return latest 10
-  return [...mockSpaces].reverse().slice(0, 10).map(d => ({
-    id: d.id,
-    message: d.message,
+  return recentClaims.map(d => ({
+    ...d,
     claimedAt: new Date(d.claimedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
   }));
 }
 
 export async function getSpace(id: number) {
-  const space = mockSpaces.find(s => s.id === id);
-  if (!space) return null;
+  const space = recentClaims.find(s => s.id === id);
+  if (!space) {
+    return {
+      id,
+      message: "This is a historical space.",
+      claimedAt: "1 Jan 2026"
+    };
+  }
   return {
     ...space,
     claimedAt: new Date(space.claimedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -38,14 +44,19 @@ export async function getSpace(id: number) {
 export async function claimSpace(message: string) {
   if (!message || message.length > 80) return { error: 'Message must be 1-80 chars.' };
   
-  const nextId = mockSpaces.length + 1;
+  simulatedClaimCount++;
+  const nextId = simulatedClaimCount;
+  
   if (nextId > 1000000) return { error: 'All spaces claimed.' };
 
-  mockSpaces.push({
+  const newClaim = {
     id: nextId,
     message,
     claimedAt: new Date().toISOString()
-  });
+  };
+
+  recentClaims.unshift(newClaim);
+  if (recentClaims.length > 10) recentClaims.pop();
 
   return { success: true, id: nextId };
 }
